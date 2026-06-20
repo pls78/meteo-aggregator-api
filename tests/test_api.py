@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 import api.main as api_main
 from api.main import app
+from meteo_aggregator import config
 from meteo_aggregator.models import (
     AggregatedForecast,
     Confidence,
@@ -126,3 +127,37 @@ def test_search_rejects_empty_name(monkeypatch):
     resp = client.get("/search", params={"name": ""})
     assert resp.status_code == 422
     assert called["hit"] is False
+
+
+def test_imagery_returns_all_layers():
+    resp = client.get("/imagery")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["layers"]) == len(config.EUMETVIEW_LAYERS)
+    layer = body["layers"][0]
+    assert layer["wms_url"] == config.EUMETVIEW_WMS_URL
+    assert layer["crs"] == config.EUMETVIEW_CRS
+    assert layer["format"] == config.EUMETVIEW_FORMAT
+
+
+def test_imagery_time_param_is_forwarded():
+    resp = client.get("/imagery", params={"time": "2026-06-20T14:07:00Z"})
+    assert resp.status_code == 200
+    body = resp.json()
+    # msg_fes:clm is a 15-min layer; 14:07 should snap to 14:00.
+    clm = next(l for l in body["layers"] if l["layer"] == "msg_fes:clm")
+    assert clm["time"] == "2026-06-20T14:00:00Z"
+
+
+def test_imagery_rejects_invalid_time():
+    resp = client.get("/imagery", params={"time": "not-a-datetime"})
+    assert resp.status_code == 422
+
+
+def test_imagery_pre_archive_time_yields_null_for_mtg():
+    # MTG starts Sep 2024; a 2023 time should give time=null for MTG layers.
+    resp = client.get("/imagery", params={"time": "2023-06-01T12:00:00Z"})
+    assert resp.status_code == 200
+    body = resp.json()
+    mtg = next(l for l in body["layers"] if l["layer"] == "mtg_fd:ir105_hrfi")
+    assert mtg["time"] is None

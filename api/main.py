@@ -6,11 +6,13 @@ client, and serialize the pydantic result.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from fastapi import FastAPI, Query
 
 from meteo_aggregator import config
-from meteo_aggregator.client import get_forecast, search_locations
-from meteo_aggregator.models import AggregatedForecast, Location, Place
+from meteo_aggregator.client import get_forecast, get_satellite_imagery, search_locations
+from meteo_aggregator.models import AggregatedForecast, Location, Place, SatelliteImagery
 
 app = FastAPI(title="Meteo-Aggregator", version="0.1.0")
 
@@ -37,3 +39,18 @@ async def search(
     # A missing/empty name is rejected by Query validation (HTTP 422) before any
     # geocoding call is made. No matches returns an empty list (200).
     return await search_locations(name, count=count, language=language)
+
+
+@app.get("/imagery", response_model=SatelliteImagery)
+def imagery(
+    time: datetime | None = Query(
+        None,
+        description="UTC timestamp for the imagery (ISO 8601). Defaults to now. "
+        "Each layer's time is snapped to its cadence boundary.",
+    ),
+) -> SatelliteImagery:
+    # FastAPI rejects non-parseable datetime strings with HTTP 422.
+    # Normalise to UTC so snapping is consistent regardless of input offset.
+    if time is not None and time.tzinfo is None:
+        time = time.replace(tzinfo=timezone.utc)
+    return get_satellite_imagery(time)

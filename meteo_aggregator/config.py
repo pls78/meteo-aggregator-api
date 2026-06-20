@@ -21,6 +21,67 @@ GEOCODING_DEFAULT_COUNT: int = 10
 GEOCODING_MAX_COUNT: int = 100
 GEOCODING_LANGUAGE: str = "en"
 
+# --- EUMETView satellite imagery ------------------------------------------
+EUMETVIEW_WMS_URL: str = "https://view.eumetsat.int/geoserver/wms"
+EUMETVIEW_CRS: str = "EPSG:3857"
+EUMETVIEW_FORMAT: str = "image/png"
+
+# Layer catalog. Each entry:
+#   name            — WMS layer name (workspace:layer)
+#   title           — human-readable label
+#   cadence_minutes — archive time step; 0 = daily (snap to start of day)
+#   archive_from    — earliest date available; requests before this get time=None
+EUMETVIEW_LAYERS: list[dict] = [
+    {
+        "name": "mtg_fd:ir105_hrfi",
+        "title": "IR 10.5 µm – MTG (cloud imagery)",
+        "cadence_minutes": 10,
+        "archive_from": "2024-09-23",
+    },
+    {
+        "name": "mtg_fd:li_afa",
+        "title": "Lightning Flash Area – MTG",
+        "cadence_minutes": 5,
+        "archive_from": "2025-05-30",
+    },
+    {
+        "name": "msg_fes:clm",
+        "title": "Cloud Mask – MSG 0°",
+        "cadence_minutes": 15,
+        "archive_from": "2020-09-01",
+    },
+    {
+        "name": "msg_fes:ir039",
+        "title": "IR 3.9 µm (fog/low cloud) – MSG 0°",
+        "cadence_minutes": 15,
+        "archive_from": "2020-09-01",
+    },
+    {
+        "name": "msg_rss:ir039_nrt",
+        "title": "IR 3.9 µm Rapid Scan (fog/low cloud, 5-min) – MSG",
+        "cadence_minutes": 5,
+        "archive_from": "2020-02-12",
+    },
+    {
+        "name": "msg_fes:gii_kindex",
+        "title": "K-Index (convective instability) – MSG 0°",
+        "cadence_minutes": 15,
+        "archive_from": "2021-06-06",
+    },
+    {
+        "name": "msg_fes:gii_liftedindex",
+        "title": "Lifted Index (convective instability) – MSG 0°",
+        "cadence_minutes": 15,
+        "archive_from": "2021-06-06",
+    },
+    {
+        "name": "copernicus:daily_sentinel3ab_olci_l1_rgb_fulres",
+        "title": "True-colour RGB Daily – Sentinel-3",
+        "cadence_minutes": 0,
+        "archive_from": "2020-02-17",
+    },
+]
+
 # --- Models ---------------------------------------------------------------
 # General provider: global models requested together in one call.
 GLOBAL_MODELS: list[str] = [

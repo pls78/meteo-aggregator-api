@@ -168,6 +168,89 @@ weights renormalize automatically and confidence widens at longer range.
 }
 ```
 
+### `GET /imagery`
+
+Returns WMS parameters for all configured EUMETSAT EUMETView satellite layers at
+a given timestamp. Each entry is ready to register with a map library (Leaflet,
+MapLibre); no image bytes flow through this service — the map client fetches
+tiles directly from EUMETSAT.
+
+#### Query parameters
+
+| Param  | Type     | Required | Default | Description                                                          |
+|--------|----------|----------|---------|----------------------------------------------------------------------|
+| `time` | datetime | no       | now     | ISO 8601 UTC timestamp. Each layer's time is snapped to its cadence. |
+
+Non-parseable `time` values are rejected with **HTTP 422**.
+
+#### Example request
+
+```bash
+curl "http://localhost:8000/imagery?time=2026-06-20T12:00:00Z"
+```
+
+#### Response
+
+`200 OK`, `application/json`. Top-level shape:
+
+| Field          | Type                    | Description                             |
+|----------------|-------------------------|-----------------------------------------|
+| `generated_at` | string (ISO-8601, UTC)  | When the parameters were computed       |
+| `layers`       | array\<WmsLayerParams\> | One entry per configured satellite layer|
+
+**`WmsLayerParams`**
+
+| Field     | Type            | Description                                                                           |
+|-----------|-----------------|---------------------------------------------------------------------------------------|
+| `wms_url` | string          | WMS endpoint (`https://view.eumetsat.int/geoserver/wms`)                              |
+| `layer`   | string          | WMS layer name (e.g. `mtg_fd:ir105_hrfi`)                                             |
+| `title`   | string          | Human-readable label                                                                  |
+| `time`    | string \| null  | ISO 8601 UTC, snapped to the layer's cadence. `null` if the request predates the archive. |
+| `crs`     | string          | `EPSG:3857` (Web Mercator — compatible with Leaflet, MapLibre, Apple MapKit)          |
+| `format`  | string          | `image/png` (transparent overlay; required for map compositing)                       |
+
+When `time` is `null` the WMS will serve the most recent available image for
+that layer.
+
+#### Configured layers
+
+| `layer`                                           | What it shows                         | Cadence | Archive from |
+|---------------------------------------------------|---------------------------------------|---------|--------------|
+| `mtg_fd:ir105_hrfi`                               | IR 10.5 µm — cloud imagery (primary)  | 10 min  | 2024-09-23   |
+| `mtg_fd:li_afa`                                   | Lightning Imager flash area           | 5 min   | 2025-05-30   |
+| `msg_fes:clm`                                     | Cloud Mask (classified)               | 15 min  | 2020-09-01   |
+| `msg_fes:ir039`                                   | IR 3.9 µm — fog and low cloud         | 15 min  | 2020-09-01   |
+| `msg_rss:ir039_nrt`                               | IR 3.9 µm Rapid Scan (5-min, Europe)  | 5 min   | 2020-02-12   |
+| `msg_fes:gii_kindex`                              | K-Index (convective instability)      | 15 min  | 2021-06-06   |
+| `msg_fes:gii_liftedindex`                         | Lifted-Index (convective instability) | 15 min  | 2021-06-06   |
+| `copernicus:daily_sentinel3ab_olci_l1_rgb_fulres` | True-colour RGB daily — Sentinel-3    | daily   | 2020-02-17   |
+
+Note: `msg_fes:ir108` (MSG IR 10.8 µm) is intentionally omitted — it is
+superseded by `mtg_fd:ir105_hrfi` for all dates from September 2024 onward.
+
+#### Using with a map library
+
+```js
+// Leaflet
+import L from "leaflet";
+
+for (const layer of imagery.layers) {
+  if (!layer.time) continue; // pre-archive, skip or show placeholder
+  L.tileLayer.wms(layer.wms_url, {
+    layers: layer.layer,
+    time: layer.time,
+    format: layer.format,
+    crs: L.CRS.EPSG3857,
+    transparent: true,
+    opacity: 0.7,
+  }).addTo(map);
+}
+```
+
+```swift
+// Apple MapKit (iOS) — use MKTileOverlay with a URL template built from layer params
+```
+
 ### `GET /search`
 
 Resolves a place-name query into a ranked list of matching places via the

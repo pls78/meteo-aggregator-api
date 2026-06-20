@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 
 import httpx
 
 from meteo_aggregator import config
 from meteo_aggregator.aggregation import aggregate
-from meteo_aggregator.models import AggregatedForecast, Location, Place
+from meteo_aggregator.models import AggregatedForecast, Location, Place, SatelliteImagery
 from meteo_aggregator.providers.ensemble import fetch_ensemble_spread
+from meteo_aggregator.providers.eumetview import get_satellite_imagery as _get_satellite_imagery
 from meteo_aggregator.providers.geocoding import search_places
 from meteo_aggregator.providers.open_meteo import OpenMeteoGeneralProvider
 from meteo_aggregator.providers.open_meteo_local import OpenMeteoLocalProvider
@@ -60,3 +62,12 @@ async def search_locations(
         return await search_places(http_client, query, count=count, language=language)
     async with httpx.AsyncClient(timeout=30.0) as client:
         return await search_places(client, query, count=count, language=language)
+
+
+def get_satellite_imagery(at: datetime | None = None) -> SatelliteImagery:
+    """Return WMS parameters for all configured EUMETView layers at time ``at``.
+
+    No network call is made — the map client fetches tiles directly from
+    EUMETSAT. See :mod:`meteo_aggregator.providers.eumetview` for snapping rules.
+    """
+    return _get_satellite_imagery(at)

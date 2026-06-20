@@ -50,6 +50,42 @@ Each day in the response carries `values` (consensus per variable), a
 contributing model with its values). ICON-2i appears in the near-term days and
 drops out beyond its horizon.
 
+## Live satellite imagery
+
+`GET /imagery` returns WMS parameters for eight EUMETSAT EUMETView layers
+(MTG infrared, MTG lightning, MSG cloud mask, MSG fog detection, MSG instability
+indices, Sentinel-3 true-colour RGB) ready to pass directly to a map library:
+
+```bash
+curl "http://localhost:8000/imagery?time=2026-06-20T12:00:00Z"
+```
+
+Each entry in `layers` carries `wms_url`, `layer`, `time` (snapped to the
+layer's cadence), `crs`, and `format`. In Leaflet:
+
+```js
+L.tileLayer.wms(layer.wms_url, {
+  layers: layer.layer,
+  time: layer.time,
+  format: layer.format,
+  crs: L.CRS.EPSG3857,
+  transparent: true,
+}).addTo(map);
+```
+
+No image bytes flow through this service — the map client fetches tiles directly
+from EUMETSAT (keyless, non-commercial). See [`api/README.md`](api/README.md)
+for the full layer list and field reference.
+
+As a library:
+
+```python
+from meteo_aggregator import get_satellite_imagery
+imagery = get_satellite_imagery()  # defaults to now
+for layer in imagery.layers:
+    print(layer.layer, layer.time)
+```
+
 ## Find coordinates by name
 
 Don't know the coordinates? Search by place name and feed a result into

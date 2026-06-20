@@ -51,6 +51,32 @@ class Place(BaseModel):
         return Location(latitude=self.latitude, longitude=self.longitude, name=self.name)
 
 
+class WmsLayerParams(BaseModel):
+    """WMS parameters for one satellite layer, ready for a map library.
+
+    Pass ``wms_url`` as the endpoint and the remaining fields as layer options
+    to Leaflet ``L.tileLayer.wms()``, MapLibre, or equivalent. The service never
+    proxies image bytes — the map client fetches tiles directly from EUMETSAT.
+    ``time`` is pre-snapped to the layer's cadence boundary; ``None`` means the
+    requested time predates the layer's archive (the WMS will serve the latest
+    available image).
+    """
+
+    wms_url: str
+    layer: str
+    title: str
+    time: Optional[str] = None  # ISO 8601 UTC, e.g. "2026-06-20T14:00:00Z"
+    crs: str
+    format: str
+
+
+class SatelliteImagery(BaseModel):
+    """WMS parameters for all configured EUMETView layers at a given moment."""
+
+    generated_at: datetime
+    layers: list[WmsLayerParams]
+
+
 class ModelDay(BaseModel):
     date: Date
     values: DailyValues
