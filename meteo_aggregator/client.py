@@ -1,0 +1,62 @@
+"""High-level facade orchestrating providers + aggregation."""
+
+from __future__ import annotations
+
+import asyncio
+
+import httpx
+
+from meteo_aggregator import config
+from meteo_aggregator.aggregation import aggregate
+from meteo_aggregator.models import AggregatedForecast, Location, Place
+from meteo_aggregator.providers.ensemble import fetch_ensemble_spread
+from meteo_aggregator.providers.geocoding import search_places
+from meteo_aggregator.providers.open_meteo import OpenMeteoGeneralProvider
+from meteo_aggregator.providers.open_meteo_local import OpenMeteoLocalProvider
+
+
+async def _run(client: httpx.AsyncClient, location: Location, days: int) -> AggregatedForecast:
+    general = OpenMeteoGeneralProvider(client)
+    local = OpenMeteoLocalProvider(client)
+
+    general_series, local_series, ensemble_spread = await asyncio.gather(
+        general.fetch(location, days),
+        local.fetch(location, days),
+        fetch_ensemble_spread(client, location, days),
+    )
+    return aggregate(location, general_series + local_series, ensemble_spread)
+
+
+async def get_forecast(
+    location: Location,
+    days: int = config.DEFAULT_DAYS,
+    *,
+    http_client: httpx.AsyncClient | None = None,
+) -> AggregatedForecast:
+    """Fetch general + local + ensemble data and aggregate into one forecast.
+
+    Pass ``http_client`` to reuse a client (and in tests); otherwise a
+    short-lived one is created and closed. The ensemble fetch is best-effort.
+    """
+    if http_client is not None:
+        return await _run(http_client, location, days)
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        return await _run(client, location, days)
+
+
+async def search_locations(
+    query: str,
+    *,
+    count: int = config.GEOCODING_DEFAULT_COUNT,
+    language: str = config.GEOCODING_LANGUAGE,
+    http_client: httpx.AsyncClient | None = None,
+) -> list[Place]:
+    """Resolve a place-name query into matching places via Open-Meteo geocoding.
+
+    Pass ``http_client`` to reuse a client (and in tests); otherwise a
+    short-lived one is created and closed. Returns an empty list on no match.
+    """
+    if http_client is not None:
+        return await search_places(http_client, query, count=count, language=language)
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        return await search_places(client, query, count=count, language=language)
