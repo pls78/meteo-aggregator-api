@@ -9,10 +9,14 @@ from datetime import datetime, timezone
 from meteo_aggregator import config
 from meteo_aggregator.models import (
     AggregatedForecast,
+    AggregatedHourlyForecast,
     Confidence,
     DailyValue,
     DailyValues,
     DayConsensus,
+    HourConsensus,
+    HourContribution,
+    HourSeries,
     Location,
     ModelContribution,
     ModelSeries,
@@ -117,6 +121,70 @@ def aggregate(
         location=location,
         generated_at=datetime.now(timezone.utc),
         days=days,
+    )
+
+
+def aggregate_hourly(
+    location: Location,
+    series_list: list[HourSeries],
+    variables: list[str] | None = None,
+) -> AggregatedHourlyForecast:
+    """Combine hourly model series into a per-hour consensus with confidence."""
+    variables = variables or config.HOURLY_VARIABLES
+
+    by_model: dict[str, tuple[HourSeries, dict[datetime, dict]]] = {
+        s.name: (s, {h.date: h.values for h in s.hours}) for s in series_list
+    }
+    all_times = sorted({h.date for s in series_list for h in s.hours})
+
+    hours: list[HourConsensus] = []
+    for lead_hour, ts in enumerate(all_times):
+        present = [
+            (name, series, hour_values[ts])
+            for name, (series, hour_values) in by_model.items()
+            if ts in hour_values
+        ]
+        breakdown = [
+            HourContribution(model=name, role=series.role, values=vals)
+            for name, series, vals in present
+        ]
+
+        lead_day = lead_hour // 24
+        consensus_values: DailyValues = {}
+        for var in variables:
+            if var in config.NON_BLENDABLE_VARIABLES:
+                consensus_values[var] = _pick_representative(present, var, lead_day)
+                continue
+            weighted: list[tuple[float, float]] = []
+            for name, _series, vals in present:
+                val = vals.get(var)
+                if val is None:
+                    continue
+                weighted.append((config.weight_for(name, lead_day), val))
+            consensus_values[var] = _blend(weighted)
+
+        conf_var = config.HOURLY_CONFIDENCE_VARIABLE
+        conf_values = [
+            vals[conf_var]
+            for _name, _series, vals in present
+            if vals.get(conf_var) is not None
+        ]
+        confidence = _confidence(consensus_values.get(conf_var), conf_values, None)
+
+        hours.append(
+            HourConsensus(
+                date=ts,
+                lead_hour=lead_hour,
+                values=consensus_values,
+                confidence=confidence,
+                breakdown=breakdown,
+            )
+        )
+
+    return AggregatedHourlyForecast(
+        location=location,
+        generated_at=datetime.now(timezone.utc),
+        hours=hours,
     )
 
 

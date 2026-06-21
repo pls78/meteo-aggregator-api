@@ -18,6 +18,65 @@ Interactive docs are available once running:
 
 ## Endpoints
 
+### `GET /hourly`
+
+Returns a per-hour aggregated forecast for up to 168 hours (7 days): consensus
+values, per-hour confidence, and a per-model breakdown for each hour.
+
+#### Query parameters
+
+| Param   | Type  | Required | Default | Constraints   | Description                        |
+|---------|-------|----------|---------|---------------|------------------------------------|
+| `lat`   | float | yes      | —       | `-90 … 90`    | Latitude in decimal degrees        |
+| `lon`   | float | yes      | —       | `-180 … 180`  | Longitude in decimal degrees       |
+| `hours` | int   | no       | `48`    | `1 … 168`     | Number of forecast hours to return |
+
+#### Example request
+
+```bash
+curl "http://localhost:8000/hourly?lat=45.5&lon=9.5&hours=48"
+```
+
+#### Response
+
+`200 OK`, `application/json`. Top-level shape:
+
+| Field          | Type                    | Description                              |
+|----------------|-------------------------|------------------------------------------|
+| `location`     | object                  | Echo of the requested location           |
+| `generated_at` | string (ISO-8601, UTC)  | When the forecast was assembled          |
+| `hours`        | array\<HourConsensus\>  | One entry per forecast hour              |
+
+**`HourConsensus`**
+
+| Field        | Type                           | Description                                              |
+|--------------|--------------------------------|----------------------------------------------------------|
+| `date`       | string (ISO-8601)              | The forecast timestamp                                   |
+| `lead_hour`  | int                            | 0-indexed offset from the first hour                     |
+| `values`     | object\<string, number\|null\> | Consensus value per variable (weighted blend)            |
+| `confidence` | object                         | Same structure as daily (`level`, `low`, `high`, `spread`) |
+| `breakdown`  | array\<HourContribution\>      | Each model's raw values for the hour                     |
+
+**Hourly variables**
+
+| Key                          | Unit  | Meaning                               |
+|------------------------------|-------|---------------------------------------|
+| `temperature_2m`             | °C    | 2 m air temperature                   |
+| `apparent_temperature`       | °C    | Feels-like temperature                |
+| `precipitation`              | mm    | Precipitation in this hour            |
+| `precipitation_probability`  | %     | Probability of precipitation          |
+| `wind_speed_10m`             | km/h  | 10 m wind speed                       |
+| `wind_direction_10m`         | °     | 10 m wind direction (non-blendable)   |
+| `weather_code`               | WMO   | Categorical condition (non-blendable) |
+| `cloud_cover`                | %     | Total cloud cover                     |
+| `relative_humidity_2m`       | %     | 2 m relative humidity                 |
+| `uv_index`                   | index | UV index                              |
+
+`wind_direction_10m` and `weather_code` are non-blendable: their consensus is
+the value from the highest-weighted model rather than an arithmetic mean
+(averaging wind directions or WMO codes is geometrically and categorically
+meaningless).
+
 ### `GET /forecast`
 
 Returns the aggregated multi-model forecast for a location: a per-day consensus,

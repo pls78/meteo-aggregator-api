@@ -11,8 +11,19 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, Query
 
 from meteo_aggregator import config
-from meteo_aggregator.client import get_forecast, get_satellite_imagery, search_locations
-from meteo_aggregator.models import AggregatedForecast, Location, Place, SatelliteImagery
+from meteo_aggregator.client import (
+    get_forecast,
+    get_hourly_forecast,
+    get_satellite_imagery,
+    search_locations,
+)
+from meteo_aggregator.models import (
+    AggregatedForecast,
+    AggregatedHourlyForecast,
+    Location,
+    Place,
+    SatelliteImagery,
+)
 
 app = FastAPI(title="Meteo-Aggregator", version="0.1.0")
 
@@ -26,6 +37,15 @@ async def forecast(
     # Invalid/missing/non-numeric coordinates are rejected by Query validation
     # (HTTP 422) before any provider call is made.
     return await get_forecast(Location(latitude=lat, longitude=lon), days)
+
+
+@app.get("/hourly", response_model=AggregatedHourlyForecast)
+async def hourly(
+    lat: float = Query(..., ge=-90, le=90, description="Latitude"),
+    lon: float = Query(..., ge=-180, le=180, description="Longitude"),
+    hours: int = Query(config.DEFAULT_HOURLY_HOURS, ge=1, le=config.MAX_HOURLY_HOURS),
+) -> AggregatedHourlyForecast:
+    return await get_hourly_forecast(Location(latitude=lat, longitude=lon), hours)
 
 
 @app.get("/search", response_model=list[Place])

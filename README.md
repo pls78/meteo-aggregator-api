@@ -50,6 +50,32 @@ Each day in the response carries `values` (consensus per variable), a
 contributing model with its values). ICON-2i appears in the near-term days and
 drops out beyond its horizon.
 
+## Hourly forecast
+
+`GET /hourly` returns a per-hour consensus for up to 168 hours using the same
+multi-model aggregation as the daily forecast:
+
+```bash
+curl "http://localhost:8000/hourly?lat=45.5&lon=9.5&hours=48"
+```
+
+Each hour carries `values` (temperature, precipitation, wind, cloud cover, UV),
+`confidence`, and a `breakdown` per model. `wind_direction_10m` and
+`weather_code` are non-blendable and taken from the highest-weighted model.
+ICON-2i contributes to the near-term hours (~72 h) and drops out beyond its
+horizon; weights renormalize automatically.
+
+As a library:
+
+```python
+from meteo_aggregator import get_hourly_forecast
+from meteo_aggregator.models import Location
+
+forecast = asyncio.run(get_hourly_forecast(Location(latitude=45.5, longitude=9.5), hours=48))
+for h in forecast.hours:
+    print(h.date, h.values["temperature_2m"], h.confidence.level)
+```
+
 ## Live satellite imagery
 
 `GET /imagery` returns WMS parameters for eight EUMETSAT EUMETView layers

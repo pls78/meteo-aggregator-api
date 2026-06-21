@@ -132,7 +132,7 @@ DAILY_VARIABLES: list[str] = [
 #   - sunrise/sunset are ISO timestamps (strings)
 #   - weather_code is a categorical WMO code
 NON_BLENDABLE_VARIABLES: frozenset[str] = frozenset(
-    {"sunrise", "sunset", "weather_code"}
+    {"sunrise", "sunset", "weather_code", "wind_direction_10m"}
 )
 
 # Representative variable used to derive the per-day confidence (in °C).
@@ -141,6 +141,27 @@ CONFIDENCE_VARIABLE: str = "temperature_2m_max"
 # --- Horizon --------------------------------------------------------------
 DEFAULT_DAYS: int = 7
 MAX_HORIZON_DAYS: int = 16
+
+# --- Hourly horizon -------------------------------------------------------
+DEFAULT_HOURLY_HOURS: int = 48
+MAX_HOURLY_HOURS: int = 168  # 7 days; hourly past that adds little over daily
+
+# Hourly variables requested from Open-Meteo.
+HOURLY_VARIABLES: list[str] = [
+    "temperature_2m",
+    "apparent_temperature",
+    "precipitation",
+    "precipitation_probability",
+    "wind_speed_10m",
+    "wind_direction_10m",
+    "weather_code",
+    "cloud_cover",
+    "relative_humidity_2m",
+    "uv_index",
+]
+
+# Representative variable for per-hour confidence (same as daily).
+HOURLY_CONFIDENCE_VARIABLE: str = "temperature_2m"
 
 # --- Lead-time weighting --------------------------------------------------
 # Days 1..NEAR_TERM_DAYS favour the high-res local model; later days favour

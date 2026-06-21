@@ -120,3 +120,44 @@ class AggregatedForecast(BaseModel):
     location: Location
     generated_at: datetime
     days: list[DayConsensus]
+
+
+# ---------------------------------------------------------------------------
+# Hourly forecast models
+# ---------------------------------------------------------------------------
+
+class ModelHour(BaseModel):
+    date: datetime
+    values: DailyValues
+
+
+class HourSeries(BaseModel):
+    """One model's hourly forecast, tagged with provenance."""
+
+    name: str
+    role: Role
+    resolution_km: Optional[float] = None
+    max_horizon_days: Optional[int] = None
+    hours: list[ModelHour]
+
+
+class HourContribution(BaseModel):
+    """A single model's values for one hour, kept for the per-model breakdown."""
+
+    model: str
+    role: Role
+    values: DailyValues
+
+
+class HourConsensus(BaseModel):
+    date: datetime
+    lead_hour: int
+    values: DailyValues
+    confidence: Confidence
+    breakdown: list[HourContribution]
+
+
+class AggregatedHourlyForecast(BaseModel):
+    location: Location
+    generated_at: datetime
+    hours: list[HourConsensus]

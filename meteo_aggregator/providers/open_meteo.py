@@ -7,11 +7,12 @@ reused by the local provider (same endpoint, different model list).
 from __future__ import annotations
 
 from datetime import date as Date
+from datetime import datetime
 
 import httpx
 
 from meteo_aggregator import config
-from meteo_aggregator.models import Location, ModelDay, ModelSeries
+from meteo_aggregator.models import Location, ModelDay, ModelHour, ModelSeries, HourSeries
 from meteo_aggregator.providers.base import ForecastProvider
 
 
@@ -76,6 +77,105 @@ async def fetch_open_meteo_daily(
     resp = await client.get(config.FORECAST_URL, params=params)
     resp.raise_for_status()
     return _parse_daily(resp.json(), models, variables)
+
+
+def _parse_hourly(data: dict, models: list[str], variables: list[str]) -> list[HourSeries]:
+    """Parse an Open-Meteo hourly response into one series per model.
+
+    Same suffix scheme as daily: multi-model responses suffix each key with the
+    model id; single-model responses may use the bare key. Hours where a model
+    has no values at all are dropped so a model self-limits to its horizon.
+    """
+    hourly = data.get("hourly") or {}
+    times = [datetime.fromisoformat(t) for t in hourly.get("time", [])]
+
+    series: list[HourSeries] = []
+    for model in models:
+        meta = config.MODEL_META.get(model, {})
+        model_hours: list[ModelHour] = []
+        for i, ts in enumerate(times):
+            values: dict[str, float | None] = {}
+            has_value = False
+            for var in variables:
+                col = hourly.get(f"{var}_{model}")
+                if col is None:
+                    col = hourly.get(var)
+                val = col[i] if col is not None and i < len(col) else None
+                values[var] = val
+                if val is not None:
+                    has_value = True
+            if has_value:
+                model_hours.append(ModelHour(date=ts, values=values))
+        series.append(
+            HourSeries(
+                name=model,
+                role=meta.get("role", "general"),
+                resolution_km=meta.get("resolution_km"),
+                max_horizon_days=meta.get("max_horizon_days"),
+                hours=model_hours,
+            )
+        )
+    return series
+
+
+async def fetch_open_meteo_hourly(
+    client: httpx.AsyncClient,
+    location: Location,
+    hours: int,
+    models: list[str],
+    variables: list[str],
+) -> list[HourSeries]:
+    """Issue a single Open-Meteo hourly request for the given models."""
+    capped = max(1, min(hours, config.MAX_HOURLY_HOURS))
+    params = {
+        "latitude": location.latitude,
+        "longitude": location.longitude,
+        "hourly": ",".join(variables),
+        "models": ",".join(models),
+        "forecast_hours": capped,
+        "timezone": "UTC",
+    }
+    resp = await client.get(config.FORECAST_URL, params=params)
+    resp.raise_for_status()
+    return _parse_hourly(resp.json(), models, variables)
+
+
+class OpenMeteoGeneralHourlyProvider:
+    """Fetches the configured global models in one Open-Meteo hourly call."""
+
+    def __init__(
+        self,
+        client: httpx.AsyncClient,
+        models: list[str] | None = None,
+        variables: list[str] | None = None,
+    ) -> None:
+        self._client = client
+        self._models = models or config.GLOBAL_MODELS
+        self._variables = variables or config.HOURLY_VARIABLES
+
+    async def fetch(self, location: Location, hours: int) -> list[HourSeries]:
+        return await fetch_open_meteo_hourly(
+            self._client, location, hours, self._models, self._variables
+        )
+
+
+class OpenMeteoLocalHourlyProvider:
+    """Fetches the config-selected local model hourly. Self-limits to ~72 h."""
+
+    def __init__(
+        self,
+        client: httpx.AsyncClient,
+        model: str | None = None,
+        variables: list[str] | None = None,
+    ) -> None:
+        self._client = client
+        self._model = model or config.LOCAL_MODEL
+        self._variables = variables or config.HOURLY_VARIABLES
+
+    async def fetch(self, location: Location, hours: int) -> list[HourSeries]:
+        return await fetch_open_meteo_hourly(
+            self._client, location, hours, [self._model], self._variables
+        )
 
 
 class OpenMeteoGeneralProvider(ForecastProvider):

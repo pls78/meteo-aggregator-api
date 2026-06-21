@@ -8,12 +8,22 @@ from datetime import datetime
 import httpx
 
 from meteo_aggregator import config
-from meteo_aggregator.aggregation import aggregate
-from meteo_aggregator.models import AggregatedForecast, Location, Place, SatelliteImagery
+from meteo_aggregator.aggregation import aggregate, aggregate_hourly
+from meteo_aggregator.models import (
+    AggregatedForecast,
+    AggregatedHourlyForecast,
+    Location,
+    Place,
+    SatelliteImagery,
+)
 from meteo_aggregator.providers.ensemble import fetch_ensemble_spread
 from meteo_aggregator.providers.eumetview import get_satellite_imagery as _get_satellite_imagery
 from meteo_aggregator.providers.geocoding import search_places
-from meteo_aggregator.providers.open_meteo import OpenMeteoGeneralProvider
+from meteo_aggregator.providers.open_meteo import (
+    OpenMeteoGeneralHourlyProvider,
+    OpenMeteoGeneralProvider,
+    OpenMeteoLocalHourlyProvider,
+)
 from meteo_aggregator.providers.open_meteo_local import OpenMeteoLocalProvider
 
 
@@ -62,6 +72,28 @@ async def search_locations(
         return await search_places(http_client, query, count=count, language=language)
     async with httpx.AsyncClient(timeout=30.0) as client:
         return await search_places(client, query, count=count, language=language)
+
+
+async def get_hourly_forecast(
+    location: Location,
+    hours: int = config.DEFAULT_HOURLY_HOURS,
+    *,
+    http_client: httpx.AsyncClient | None = None,
+) -> AggregatedHourlyForecast:
+    """Fetch general + local hourly data and aggregate into one hourly forecast."""
+    async def _run(client: httpx.AsyncClient) -> AggregatedHourlyForecast:
+        general = OpenMeteoGeneralHourlyProvider(client)
+        local = OpenMeteoLocalHourlyProvider(client)
+        general_series, local_series = await asyncio.gather(
+            general.fetch(location, hours),
+            local.fetch(location, hours),
+        )
+        return aggregate_hourly(location, general_series + local_series)
+
+    if http_client is not None:
+        return await _run(http_client)
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        return await _run(client)
 
 
 def get_satellite_imagery(at: datetime | None = None) -> SatelliteImagery:

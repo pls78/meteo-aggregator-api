@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 import pytest
 
-from meteo_aggregator import get_forecast, get_satellite_imagery, search_locations
+from meteo_aggregator import get_forecast, get_hourly_forecast, get_satellite_imagery, search_locations
 from meteo_aggregator.models import Location
 
 pytestmark = pytest.mark.live
@@ -37,6 +37,26 @@ async def test_live_seven_day_forecast():
     # Local high-res model should contribute to the near term, not day 7.
     day1_models = {c.model for c in forecast.days[0].breakdown}
     assert "italia_meteo_arpae_icon_2i" in day1_models
+
+
+@pytest.mark.skipif(os.environ.get("METEO_LIVE") != "1", reason="set METEO_LIVE=1 to run")
+async def test_live_hourly_forecast():
+    forecast = await get_hourly_forecast(LOMBARDY, hours=48)
+
+    assert len(forecast.hours) == 48
+    for hour in forecast.hours:
+        assert hour.values.get("temperature_2m") is not None
+        assert hour.breakdown, "each hour should carry a per-model breakdown"
+        assert hour.confidence.level in {"high", "medium", "low"}
+
+    # Non-blendable variables keep their native types end-to-end.
+    h0 = forecast.hours[0]
+    assert h0.values.get("weather_code") is not None
+    assert isinstance(h0.values.get("wind_direction_10m"), (int, float))
+
+    # Local high-res model should contribute to the near-term hours.
+    near_term_models = {c.model for c in forecast.hours[0].breakdown}
+    assert "italia_meteo_arpae_icon_2i" in near_term_models
 
 
 @pytest.mark.skipif(os.environ.get("METEO_LIVE") != "1", reason="set METEO_LIVE=1 to run")
