@@ -1,3 +1,9 @@
+## Purpose
+
+Provide a per-hour aggregated forecast — consensus values, confidence, and the
+per-model breakdown — over a requested horizon, complementing the daily
+`GET /forecast` capability for clients that need hourly resolution.
+
 ## Requirements
 
 ### Requirement: Hourly forecast endpoint
