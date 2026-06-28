@@ -6,5 +6,5 @@
 
 ## 2. Docs
 
-- [ ] 2.1 Note browser/CORS support and the allowed local origins in
+- [x] 2.1 Note browser/CORS support and the allowed local origins in
   `api/README.md`

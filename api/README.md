@@ -16,6 +16,18 @@ Interactive docs are available once running:
 - Swagger UI: `http://localhost:8000/docs`
 - OpenAPI schema: `http://localhost:8000/openapi.json`
 
+## Browser clients (CORS)
+
+The API is read-only, so it enables CORS for the local web UI's dev-server
+origins and exposes `GET` only. Allowed origins:
+
+- `http://localhost:5173`
+- `http://127.0.0.1:5173`
+
+A page served from one of these origins can `fetch` the endpoints directly. Other
+origins are not granted access — add yours to the `CORSMiddleware` configuration
+in `api/main.py` if you serve the UI from elsewhere.
+
 ## Endpoints
 
 ### `GET /hourly`
