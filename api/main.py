@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 
 from meteo_aggregator import config
 from meteo_aggregator.client import (
@@ -26,6 +27,14 @@ from meteo_aggregator.models import (
 )
 
 app = FastAPI(title="Meteo-Aggregator", version="0.1.0")
+
+# Allow the local web UI (Vite dev server) to call the API from the browser.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/forecast", response_model=AggregatedForecast)
