@@ -156,6 +156,23 @@ LOCAL_MODEL = "italia_meteo_arpae_icon_2i"  # -> any Open-Meteo model id
 or pass `model=` when constructing `OpenMeteoLocalProvider`. Weighting and
 confidence thresholds are also in `config.py`.
 
+## Deploy
+
+The API is stateless and keyless, so it deploys as a single scale-to-zero
+container ([`Dockerfile`](Dockerfile)). It currently runs on Google Cloud Run:
+
+<https://your-backend.example.com>
+
+```bash
+gcloud run deploy meteo-aggregator --source . --region europe-west1 --allow-unauthenticated
+```
+
+For browser clients, set `ALLOWED_ORIGINS` (comma-separated) to the UI's origin;
+it defaults to the local dev origins. A `GET /health` endpoint (returns
+`{"status": "ok"}`, no upstream calls) is available for uptime checks. See
+[`api/README.md`](api/README.md#deployment) for the full deployment and CORS
+reference.
+
 ## Tests
 
 ```bash

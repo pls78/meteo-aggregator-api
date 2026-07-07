@@ -6,6 +6,7 @@ client, and serialize the pydantic result.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Query
@@ -28,13 +29,28 @@ from meteo_aggregator.models import (
 
 app = FastAPI(title="Meteo-Aggregator", version="0.1.0")
 
-# Allow the local web UI (Vite dev server) to call the API from the browser.
+# Browser origins allowed to call the API. Defaults to the local Vite dev-server
+# origins; in production set ALLOWED_ORIGINS to the deployed UI origin(s)
+# (comma-separated) so the origin isn't baked into the image.
+_DEFAULT_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+allowed_origins = [
+    origin.strip()
+    for origin in os.environ.get("ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+] or _DEFAULT_ORIGINS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=allowed_origins,
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    """Liveness probe / friendly root check. Makes no upstream calls."""
+    return {"status": "ok"}
 
 
 @app.get("/forecast", response_model=AggregatedForecast)

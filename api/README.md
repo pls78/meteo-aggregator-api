@@ -16,17 +16,45 @@ Interactive docs are available once running:
 - Swagger UI: `http://localhost:8000/docs`
 - OpenAPI schema: `http://localhost:8000/openapi.json`
 
+## Deployment
+
+The service is stateless, keyless, and holds no persistent state, so it runs as a
+single scale-to-zero container. A minimal [`Dockerfile`](../Dockerfile) builds it;
+uvicorn binds `0.0.0.0:$PORT` (the platform injects `$PORT`, default `8080`).
+
+Deployed target — Google Cloud Run (`europe-west1`):
+<https://your-backend.example.com>
+
+```bash
+# from the repo root — builds the Dockerfile, deploys, prints the HTTPS URL
+gcloud run deploy meteo-aggregator --source . --region europe-west1 --allow-unauthenticated
+
+# point CORS at the deployed UI origin (see below)
+gcloud run services update meteo-aggregator --region europe-west1 \
+  --set-env-vars ALLOWED_ORIGINS=https://meteo-aggregator.pages.dev
+```
+
+Cloud Run scales to zero, so the service costs nothing while idle; the first
+request after inactivity pays a ~1–2 s cold start.
+
 ## Browser clients (CORS)
 
-The API is read-only, so it enables CORS for the local web UI's dev-server
-origins and exposes `GET` only. Allowed origins:
+The API is read-only, so it emits CORS headers for `GET` only. The allowed
+origins are configurable via the `ALLOWED_ORIGINS` environment variable
+(comma-separated); when it is unset the app falls back to the local web UI's
+dev-server origins:
 
 - `http://localhost:5173`
 - `http://127.0.0.1:5173`
 
-A page served from one of these origins can `fetch` the endpoints directly. Other
-origins are not granted access — add yours to the `CORSMiddleware` configuration
-in `api/main.py` if you serve the UI from elsewhere.
+In production, set `ALLOWED_ORIGINS` to the deployed UI origin(s):
+
+```bash
+ALLOWED_ORIGINS=https://meteo-aggregator.pages.dev uvicorn api.main:app
+```
+
+A page served from an allowed origin can `fetch` the endpoints directly; other
+origins are not granted access.
 
 ## Endpoints
 
@@ -385,6 +413,15 @@ is the top match for `Milan`; pass `&language=it` to favour the local spelling
     "elevation": 122.0
   }
 ]
+```
+
+### `GET /health`
+
+Liveness/readiness probe. Returns `200 OK` with `{"status": "ok"}` and makes no
+upstream calls — safe for container health checks and uptime monitors.
+
+```bash
+curl "http://localhost:8000/health"
 ```
 
 ## Errors
