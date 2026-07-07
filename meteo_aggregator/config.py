@@ -99,6 +99,11 @@ EUMETVIEW_LAYERS: list[dict] = [
         "name": "copernicus:daily_sentinel3ab_olci_l1_rgb_fulres",
         "title": "True-colour RGB Daily – Sentinel-3",
         "cadence_minutes": 0,
+        # Polar-orbiter daily mosaic: "today" is accumulated over the UTC day and
+        # is not complete/processed until ~2 days later (yesterday's tiles 502 or
+        # cover only part of the globe). Override the near-real-time latency so we
+        # request the day that ended ~48 h ago, which is complete worldwide.
+        "latency_minutes": 2880,
         "archive_from": "2020-02-17",
     },
 ]
