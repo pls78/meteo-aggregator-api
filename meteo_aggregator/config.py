@@ -84,8 +84,13 @@ EUMETVIEW_LAYERS: list[dict] = [
 
 # --- Models ---------------------------------------------------------------
 # General provider: global models requested together in one call.
+# ecmwf_aifs025_single is ECMWF's data-driven (machine-learning) model; it is
+# blended alongside the physics-based models for diversity. It does not supply
+# precipitation_probability or uv_index — aggregation renormalizes per variable,
+# so it simply drops out of those.
 GLOBAL_MODELS: list[str] = [
     "ecmwf_ifs025",
+    "ecmwf_aifs025_single",
     "gfs_seamless",
     "icon_seamless",
 ]
@@ -101,6 +106,7 @@ ENSEMBLE_MODEL: str = "icon_seamless"
 # Per-model metadata, carried as provenance on every series.
 MODEL_META: dict[str, dict] = {
     "ecmwf_ifs025": {"role": "general", "resolution_km": 25.0, "max_horizon_days": 15},
+    "ecmwf_aifs025_single": {"role": "general", "resolution_km": 25.0, "max_horizon_days": 15},
     "gfs_seamless": {"role": "general", "resolution_km": 11.0, "max_horizon_days": 16},
     "icon_seamless": {"role": "general", "resolution_km": 11.0, "max_horizon_days": 7},
     "italia_meteo_arpae_icon_2i": {"role": "local", "resolution_km": 2.0, "max_horizon_days": 3},
@@ -169,17 +175,21 @@ HOURLY_CONFIDENCE_VARIABLE: str = "temperature_2m"
 # present for a given day, so absent models simply drop out.
 NEAR_TERM_DAYS: int = 3
 
+# Weights need not sum to 1: aggregation renormalizes over the models actually
+# present for a given day and variable.
 WEIGHTS_NEAR_TERM: dict[str, float] = {
     "italia_meteo_arpae_icon_2i": 0.50,
-    "ecmwf_ifs025": 0.25,
-    "icon_seamless": 0.15,
-    "gfs_seamless": 0.10,
+    "ecmwf_ifs025": 0.18,
+    "ecmwf_aifs025_single": 0.12,
+    "icon_seamless": 0.12,
+    "gfs_seamless": 0.08,
 }
 
 WEIGHTS_RANGE: dict[str, float] = {
-    "ecmwf_ifs025": 0.50,
-    "icon_seamless": 0.25,
-    "gfs_seamless": 0.25,
+    "ecmwf_ifs025": 0.35,
+    "ecmwf_aifs025_single": 0.30,
+    "icon_seamless": 0.20,
+    "gfs_seamless": 0.15,
 }
 
 

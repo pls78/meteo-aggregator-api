@@ -146,13 +146,17 @@ def test_aggregate_hourly_blends_temperature():
 
 def test_aggregate_hourly_local_favoured_near_term():
     ts = "2026-06-21T06:00+00:00"
-    # lead_hour=6 → lead_day=0 → near-term → ICON-2i weight 0.50 > ECMWF 0.25
+    # lead_hour=6 → lead_day=0 → near-term → ICON-2i outweighs ECMWF
     icon2i = _make_series("italia_meteo_arpae_icon_2i", "local", [(ts, {"temperature_2m": 22.0})])
     ecmwf = _make_series("ecmwf_ifs025", "general", [(ts, {"temperature_2m": 18.0})])
     result = aggregate_hourly(MILAN, [icon2i, ecmwf], variables=["temperature_2m"])
-    # Weighted: (0.50*22 + 0.25*18) / 0.75 = 20.67
+    # Renormalized weighted mean, pulled toward the higher-weighted local model.
+    wl = config.weight_for("italia_meteo_arpae_icon_2i", 0)
+    we = config.weight_for("ecmwf_ifs025", 0)
+    expected = (wl * 22.0 + we * 18.0) / (wl + we)
     val = result.hours[0].values["temperature_2m"]
-    assert val == pytest.approx(20.666, rel=1e-3)
+    assert val == pytest.approx(expected)
+    assert val > (22.0 + 18.0) / 2  # favoured toward ICON-2i
 
 
 def test_aggregate_hourly_weight_renormalizes_without_local():

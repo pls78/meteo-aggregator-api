@@ -11,9 +11,11 @@ It is a **library core** (`meteo_aggregator/`) plus a **thin FastAPI layer**
 
 ## How it works
 
-- **General provider** — global models (ECMWF, GFS, ICON) fetched together from
-  the [Open-Meteo Forecast API](https://open-meteo.com/en/docs) in one keyless
-  call, up to a 16-day horizon.
+- **General provider** — global models fetched together from the
+  [Open-Meteo Forecast API](https://open-meteo.com/en/docs) in one keyless call,
+  up to a 16-day horizon: ECMWF **IFS**, ECMWF **AIFS** (the machine-learning
+  model), GFS, and ICON. Blending a data-driven model with the physics-based ones
+  diversifies the consensus.
 - **Specialized-local provider** — a high-resolution regional model
   (default: ItaliaMeteo-ARPAE **ICON-2i**, ~2 km, Italy-wide, ~3-day horizon)
   via Open-Meteo.
