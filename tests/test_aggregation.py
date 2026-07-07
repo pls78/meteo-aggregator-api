@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 import pytest
 
+from meteo_aggregator import config
 from meteo_aggregator.aggregation import _confidence, aggregate
 from meteo_aggregator.models import Location, ModelDay, ModelSeries
 
@@ -31,24 +32,41 @@ def test_near_term_favors_local_high_res():
     forecast = aggregate(LOC, series)
     consensus = forecast.days[0].values["temperature_2m_max"]
     plain_mean = statistics.fmean([10.0, 20.0, 20.0, 20.0])  # 17.5
-    # local weight 0.5 -> 0.5*10 + 0.5*20 = 15, pulled toward the local model.
-    assert consensus == pytest.approx(15.0)
-    assert consensus < plain_mean
+    # Renormalized weighted mean over the present near-term weights; the local
+    # model carries the most weight, so the consensus is pulled toward its 10.0.
+    temps = {
+        "italia_meteo_arpae_icon_2i": 10.0,
+        "ecmwf_ifs025": 20.0,
+        "icon_seamless": 20.0,
+        "gfs_seamless": 20.0,
+    }
+    w = {n: config.weight_for(n, 0) for n in temps}
+    expected = sum(w[n] * temps[n] for n in temps) / sum(w.values())
+    assert consensus == pytest.approx(expected)
+    assert consensus < plain_mean  # favoured toward the local model
 
 
 def test_long_range_favors_ecmwf():
-    # lead_day 3 (>= NEAR_TERM_DAYS): use the range weight table.
+    # aggregate() assigns lead_day by position in the present dates, so provide
+    # four consecutive days and inspect the 4th (lead_day 3 >= NEAR_TERM_DAYS),
+    # which uses the range weight table. Filler values for leads 0..2 are unused.
+    filler = [15.0, 15.0, 15.0]
     series = [
-        _series("ecmwf_ifs025", "general", 3, [10.0]),
-        _series("icon_seamless", "general", 3, [20.0]),
-        _series("gfs_seamless", "general", 3, [20.0]),
+        _series("ecmwf_ifs025", "general", 0, filler + [10.0]),
+        _series("icon_seamless", "general", 0, filler + [20.0]),
+        _series("gfs_seamless", "general", 0, filler + [20.0]),
     ]
-    forecast = aggregate(LOC, series)
-    consensus = forecast.days[0].values["temperature_2m_max"]
+    day = aggregate(LOC, series).days[3]
+    assert day.lead_day == 3
+    consensus = day.values["temperature_2m_max"]
     plain_mean = statistics.fmean([10.0, 20.0, 20.0])  # 16.67
-    # ecmwf weight 0.5 -> 0.5*10 + 0.25*20 + 0.25*20 = 15, pulled toward ECMWF.
-    assert consensus == pytest.approx(15.0)
-    assert consensus < plain_mean
+    # Renormalized weighted mean over the range weights; ECMWF carries the most
+    # weight at range, so the consensus is pulled toward its 10.0.
+    temps = {"ecmwf_ifs025": 10.0, "icon_seamless": 20.0, "gfs_seamless": 20.0}
+    w = {n: config.weight_for(n, 3) for n in temps}
+    expected = sum(w[n] * temps[n] for n in temps) / sum(w.values())
+    assert consensus == pytest.approx(expected)
+    assert consensus < plain_mean  # favoured toward ECMWF
 
 
 def test_weights_renormalize_when_local_absent():
@@ -59,8 +77,10 @@ def test_weights_renormalize_when_local_absent():
     ]
     forecast = aggregate(LOC, series)
     consensus = forecast.days[0].values["temperature_2m_max"]
-    # Renormalized over present weights: (0.25*10 + 0.10*20) / 0.35.
-    expected = (0.25 * 10.0 + 0.10 * 20.0) / 0.35
+    # Renormalized over only the present models' weights.
+    temps = {"ecmwf_ifs025": 10.0, "gfs_seamless": 20.0}
+    w = {n: config.weight_for(n, 0) for n in temps}
+    expected = sum(w[n] * temps[n] for n in temps) / sum(w.values())
     assert consensus == pytest.approx(expected)
 
 
@@ -139,7 +159,9 @@ def test_non_blendable_variables_pick_highest_weighted_model():
     day = aggregate(LOC, series).days[0]
     # Numeric temp is blended (weights renormalized over the two present models),
     # pulled toward the higher-weighted local model.
-    expected_temp = (0.50 * 10.0 + 0.25 * 20.0) / (0.50 + 0.25)
+    wl = config.weight_for("italia_meteo_arpae_icon_2i", 0)
+    we = config.weight_for("ecmwf_ifs025", 0)
+    expected_temp = (wl * 10.0 + we * 20.0) / (wl + we)
     assert day.values["temperature_2m_max"] == pytest.approx(expected_temp)
     # Categorical/string take the highest-weighted (local) model's value.
     assert day.values["weather_code"] == 3
