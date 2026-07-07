@@ -80,9 +80,11 @@ for h in forecast.hours:
 
 ## Live satellite imagery
 
-`GET /imagery` returns WMS parameters for eight EUMETSAT EUMETView layers
-(MTG infrared, MTG lightning, MSG cloud mask, MSG fog detection, MSG instability
-indices, Sentinel-3 true-colour RGB) ready to pass directly to a map library:
+`GET /imagery` returns WMS parameters for a curated set of EUMETSAT EUMETView
+layers — spectacular MTG RGB composites (Geo Colour, Dust, Cloud Phase), MSG RGB
+composites (Airmass, Convection), plus MTG IR cloud imagery, lightning, cloud
+mask, rapid-scan fog, and high-res Sentinel-3 true colour — ready to pass
+directly to a map library:
 
 ```bash
 curl "http://localhost:8000/imagery?time=2026-06-20T12:00:00Z"

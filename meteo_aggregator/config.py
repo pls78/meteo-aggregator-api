@@ -31,12 +31,45 @@ EUMETVIEW_FORMAT: str = "image/png"
 #   title           — human-readable label
 #   cadence_minutes — archive time step; 0 = daily (snap to start of day)
 #   archive_from    — earliest date available; requests before this get time=None
+# Catalog favours visually rich RGB composites and avoids near-duplicate
+# products (e.g. the same IR channel at two scan cadences, or two equivalent
+# instability indices) — the more informative one of any such pair is kept.
 EUMETVIEW_LAYERS: list[dict] = [
+    {
+        "name": "mtg_fd:rgb_geocolour",
+        "title": "Geo Colour RGB (day + night) – MTG",
+        "cadence_minutes": 10,
+        "archive_from": "2024-09-23",
+    },
     {
         "name": "mtg_fd:ir105_hrfi",
         "title": "IR 10.5 µm – MTG (cloud imagery)",
         "cadence_minutes": 10,
         "archive_from": "2024-09-23",
+    },
+    {
+        "name": "mtg_fd:rgb_cloudphase",
+        "title": "Cloud Phase RGB – MTG",
+        "cadence_minutes": 10,
+        "archive_from": "2024-09-23",
+    },
+    {
+        "name": "mtg_fd:rgb_dust",
+        "title": "Dust RGB (Saharan dust) – MTG",
+        "cadence_minutes": 10,
+        "archive_from": "2024-10-22",
+    },
+    {
+        "name": "msg_fes:rgb_airmass",
+        "title": "Airmass RGB – MSG 0°",
+        "cadence_minutes": 15,
+        "archive_from": "2020-09-01",
+    },
+    {
+        "name": "msg_fes:rgb_convection",
+        "title": "Convection RGB (storm potential) – MSG 0°",
+        "cadence_minutes": 15,
+        "archive_from": "2020-09-01",
     },
     {
         "name": "mtg_fd:li_afa",
@@ -51,28 +84,10 @@ EUMETVIEW_LAYERS: list[dict] = [
         "archive_from": "2020-09-01",
     },
     {
-        "name": "msg_fes:ir039",
-        "title": "IR 3.9 µm (fog/low cloud) – MSG 0°",
-        "cadence_minutes": 15,
-        "archive_from": "2020-09-01",
-    },
-    {
         "name": "msg_rss:ir039_nrt",
         "title": "IR 3.9 µm Rapid Scan (fog/low cloud, 5-min) – MSG",
         "cadence_minutes": 5,
         "archive_from": "2020-02-12",
-    },
-    {
-        "name": "msg_fes:gii_kindex",
-        "title": "K-Index (convective instability) – MSG 0°",
-        "cadence_minutes": 15,
-        "archive_from": "2021-06-06",
-    },
-    {
-        "name": "msg_fes:gii_liftedindex",
-        "title": "Lifted Index (convective instability) – MSG 0°",
-        "cadence_minutes": 15,
-        "archive_from": "2021-06-06",
     },
     {
         "name": "copernicus:daily_sentinel3ab_olci_l1_rgb_fulres",

@@ -313,19 +313,24 @@ that layer.
 
 #### Configured layers
 
-| `layer`                                           | What it shows                         | Cadence | Archive from |
-|---------------------------------------------------|---------------------------------------|---------|--------------|
-| `mtg_fd:ir105_hrfi`                               | IR 10.5 µm — cloud imagery (primary)  | 10 min  | 2024-09-23   |
-| `mtg_fd:li_afa`                                   | Lightning Imager flash area           | 5 min   | 2025-05-30   |
-| `msg_fes:clm`                                     | Cloud Mask (classified)               | 15 min  | 2020-09-01   |
-| `msg_fes:ir039`                                   | IR 3.9 µm — fog and low cloud         | 15 min  | 2020-09-01   |
-| `msg_rss:ir039_nrt`                               | IR 3.9 µm Rapid Scan (5-min, Europe)  | 5 min   | 2020-02-12   |
-| `msg_fes:gii_kindex`                              | K-Index (convective instability)      | 15 min  | 2021-06-06   |
-| `msg_fes:gii_liftedindex`                         | Lifted-Index (convective instability) | 15 min  | 2021-06-06   |
-| `copernicus:daily_sentinel3ab_olci_l1_rgb_fulres` | True-colour RGB daily — Sentinel-3    | daily   | 2020-02-17   |
+| `layer`                                           | What it shows                              | Cadence | Archive from |
+|---------------------------------------------------|--------------------------------------------|---------|--------------|
+| `mtg_fd:rgb_geocolour`                            | Geo Colour RGB — true colour by day, IR/clouds by night | 10 min  | 2024-09-23   |
+| `mtg_fd:ir105_hrfi`                               | IR 10.5 µm — cloud imagery                 | 10 min  | 2024-09-23   |
+| `mtg_fd:rgb_cloudphase`                           | Cloud Phase RGB — ice vs. water clouds     | 10 min  | 2024-09-23   |
+| `mtg_fd:rgb_dust`                                 | Dust RGB — Saharan dust plumes             | 10 min  | 2024-10-22   |
+| `msg_fes:rgb_airmass`                             | Airmass RGB — air masses / jet streams     | 15 min  | 2020-09-01   |
+| `msg_fes:rgb_convection`                          | Convection RGB — storm potential           | 15 min  | 2020-09-01   |
+| `mtg_fd:li_afa`                                   | Lightning Imager flash area                | 5 min   | 2025-05-30   |
+| `msg_fes:clm`                                     | Cloud Mask (classified)                    | 15 min  | 2020-09-01   |
+| `msg_rss:ir039_nrt`                               | IR 3.9 µm Rapid Scan (fog/low cloud, 5-min, Europe) | 5 min   | 2020-02-12   |
+| `copernicus:daily_sentinel3ab_olci_l1_rgb_fulres` | True-colour RGB daily — Sentinel-3 (high-res) | daily   | 2020-02-17   |
 
-Note: `msg_fes:ir108` (MSG IR 10.8 µm) is intentionally omitted — it is
-superseded by `mtg_fd:ir105_hrfi` for all dates from September 2024 onward.
+The catalog favours visually rich RGB composites and avoids near-duplicate
+products. `msg_fes:ir039` (15-min full-disk IR 3.9) is dropped in favour of the
+5-min rapid-scan `msg_rss:ir039_nrt` (same product, faster over Europe); the
+`gii_*` convective-instability indices are dropped in favour of the Convection
+RGB. `msg_fes:ir108` (MSG IR 10.8 µm) remains superseded by `mtg_fd:ir105_hrfi`.
 
 #### Using with a map library
 
