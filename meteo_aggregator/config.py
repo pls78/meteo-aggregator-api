@@ -26,6 +26,12 @@ EUMETVIEW_WMS_URL: str = "https://view.eumetsat.int/geoserver/wms"
 EUMETVIEW_CRS: str = "EPSG:3857"
 EUMETVIEW_FORMAT: str = "image/png"
 
+# Dissemination lag: the most recent cadence boundary is often not published yet,
+# so requesting it makes EUMETSAT's WMS error (500/502/ServiceException). Never
+# request a frame newer than now - this many minutes; observed MTG/MSG latency is
+# ~10-16 min, so 20 gives a safe margin while keeping imagery near-real-time.
+EUMETVIEW_LATENCY_MINUTES: int = 20
+
 # Layer catalog. Each entry:
 #   name            — WMS layer name (workspace:layer)
 #   title           — human-readable label

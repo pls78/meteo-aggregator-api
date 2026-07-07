@@ -5,7 +5,7 @@ No network calls are made — the provider is pure computation.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -116,3 +116,30 @@ def test_defaults_to_now_when_no_time():
     # All layers with archives before today should have a non-None time.
     clm = next(l for l in result.layers if l.layer == "msg_fes:clm")
     assert clm.time is not None
+
+
+def _parse(t: str) -> datetime:
+    return datetime.strptime(t, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+
+
+def test_recent_request_clamped_to_publish_latency():
+    # The freshest cadence boundary is not disseminated yet; a "now" request must
+    # snap to no newer than now - EUMETVIEW_LATENCY_MINUTES (else EUMETSAT errors).
+    now = datetime.now(timezone.utc)
+    result = get_satellite_imagery(now)
+    bound = now - timedelta(minutes=config.EUMETVIEW_LATENCY_MINUTES)
+    for layer in result.layers:
+        if layer.time is None:
+            continue
+        assert _parse(layer.time) <= bound
+
+
+def test_future_request_clamped_to_publish_latency():
+    # A future timestamp must not produce a future (unavailable) frame either.
+    future = datetime.now(timezone.utc) + timedelta(hours=6)
+    result = get_satellite_imagery(future)
+    bound = datetime.now(timezone.utc) - timedelta(
+        minutes=config.EUMETVIEW_LATENCY_MINUTES
+    )
+    geo = next(l for l in result.layers if l.layer == "mtg_fd:rgb_geocolour")
+    assert _parse(geo.time) <= bound
