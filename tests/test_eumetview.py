@@ -134,6 +134,23 @@ def test_recent_request_clamped_to_publish_latency():
         assert _parse(layer.time) <= bound
 
 
+def test_daily_layer_uses_its_own_larger_latency():
+    # The Sentinel-3 daily mosaic overrides the global latency (~48 h), so a "now"
+    # request lands two full UTC days back, not today's partial accumulation.
+    now = datetime.now(timezone.utc)
+    result = get_satellite_imagery(now)
+    s3 = next(
+        l for l in result.layers
+        if l.layer == "copernicus:daily_sentinel3ab_olci_l1_rgb_fulres"
+    )
+    latency = next(
+        d["latency_minutes"] for d in config.EUMETVIEW_LAYERS
+        if d["name"] == "copernicus:daily_sentinel3ab_olci_l1_rgb_fulres"
+    )
+    expected_day = (now - timedelta(minutes=latency)).date()
+    assert s3.time == f"{expected_day.isoformat()}T00:00:00Z"
+
+
 def test_future_request_clamped_to_publish_latency():
     # A future timestamp must not produce a future (unavailable) frame either.
     future = datetime.now(timezone.utc) + timedelta(hours=6)
