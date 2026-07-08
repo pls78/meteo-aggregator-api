@@ -106,7 +106,10 @@ async def test_hourly_provider_caps_hours_at_max():
     async with httpx.AsyncClient() as c:
         await OpenMeteoGeneralHourlyProvider(c).fetch(MILAN, 9999)
 
-    assert route.calls.last.request.url.params["forecast_hours"] == str(config.MAX_HOURLY_HOURS)
+    params = route.calls.last.request.url.params
+    assert params["forecast_hours"] == str(config.MAX_HOURLY_HOURS)
+    # Local timezone (matching /forecast) so hours group under the same calendar day.
+    assert params["timezone"] == "auto"
 
 
 # ---------------------------------------------------------------------------

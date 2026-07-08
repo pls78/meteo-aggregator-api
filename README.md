@@ -62,7 +62,10 @@ curl "http://localhost:8000/hourly?lat=45.5&lon=9.5&hours=48"
 ```
 
 Each hour carries `values` (temperature, precipitation, wind, cloud cover, UV),
-`confidence`, and a `breakdown` per model. `wind_direction_10m` and
+`confidence`, and a `breakdown` per model. Hour timestamps (`date`) are in the
+location's local timezone — matching the daily forecast — so an hour groups under
+the same calendar day as `/forecast`; `hours[0]` is current conditions.
+`wind_direction_10m` and
 `weather_code` are non-blendable and taken from the highest-weighted model.
 ICON-2i contributes to the near-term hours (~72 h) and drops out beyond its
 horizon; weights renormalize automatically.
