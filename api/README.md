@@ -91,8 +91,8 @@ curl "http://localhost:8000/hourly?lat=45.5&lon=9.5&hours=48"
 
 | Field        | Type                           | Description                                              |
 |--------------|--------------------------------|----------------------------------------------------------|
-| `date`       | string (ISO-8601)              | The forecast timestamp                                   |
-| `lead_hour`  | int                            | 0-indexed offset from the first hour                     |
+| `date`       | string (ISO-8601, local)       | Forecast timestamp in the location's local timezone (matches the daily `date`) |
+| `lead_hour`  | int                            | 0-indexed offset from the first hour; `lead_hour` 0 is current conditions |
 | `values`     | object\<string, number\|null\> | Consensus value per variable (weighted blend)            |
 | `confidence` | object                         | Same structure as daily (`level`, `low`, `high`, `spread`) |
 | `breakdown`  | array\<HourContribution\>      | Each model's raw values for the hour                     |

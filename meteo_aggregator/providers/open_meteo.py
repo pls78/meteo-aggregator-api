@@ -133,7 +133,9 @@ async def fetch_open_meteo_hourly(
         "hourly": ",".join(variables),
         "models": ",".join(models),
         "forecast_hours": capped,
-        "timezone": "UTC",
+        # Local timezone, matching the daily forecast, so an hour's date groups under the
+        # same calendar day as /forecast. forecast_hours still anchors hours[0] to "now".
+        "timezone": "auto",
     }
     resp = await client.get(config.FORECAST_URL, params=params)
     resp.raise_for_status()
