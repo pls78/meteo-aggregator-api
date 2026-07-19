@@ -1,5 +1,7 @@
 # Meteo-Aggregator
 
+[![CI/CD](https://github.com/pls78/meteo-aggregator/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/pls78/meteo-aggregator/actions/workflows/ci-cd.yml)
+
 Accurate local 7-day forecasts by aggregating multiple weather models. No single
 source is best across all lead times — high-resolution regional models win the
 near term (days 1–3), ECMWF wins at range, and far-out days are inherently
