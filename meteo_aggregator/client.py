@@ -96,10 +96,14 @@ async def get_hourly_forecast(
         return await _run(client)
 
 
-def get_satellite_imagery(at: datetime | None = None) -> SatelliteImagery:
+def get_satellite_imagery(
+    at: datetime | None = None, frames: int = 1
+) -> SatelliteImagery:
     """Return WMS parameters for all configured EUMETView layers at time ``at``.
 
-    No network call is made — the map client fetches tiles directly from
-    EUMETSAT. See :mod:`meteo_aggregator.providers.eumetview` for snapping rules.
+    ``frames`` requests the N most-recent cadence-stepped frames per layer for a
+    time-lapse animation (newest first). No network call is made — the map client
+    fetches tiles directly from EUMETSAT. See
+    :mod:`meteo_aggregator.providers.eumetview` for snapping rules.
     """
-    return _get_satellite_imagery(at)
+    return _get_satellite_imagery(at, frames=frames)

@@ -88,8 +88,9 @@ for h in forecast.hours:
 `GET /imagery` returns WMS parameters for a curated set of EUMETSAT EUMETView
 layers — spectacular MTG RGB composites (Geo Colour, Dust, Cloud Phase), MSG RGB
 composites (Airmass, Convection), plus MTG IR cloud imagery, lightning, cloud
-mask, rapid-scan fog, and high-res Sentinel-3 true colour — ready to pass
-directly to a map library:
+mask, and rapid-scan fog — ready to pass
+directly to a map library. Pass `frames=N` to get the last N cadence-stepped
+frames per layer (newest first) for a time-lapse animation:
 
 ```bash
 curl "http://localhost:8000/imagery?time=2026-06-20T12:00:00Z"

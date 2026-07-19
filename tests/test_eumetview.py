@@ -78,16 +78,6 @@ def test_time_snapped_for_10min_layer():
     assert mtg.time == "2026-06-20T09:20:00Z"
 
 
-def test_sentinel3_snapped_to_midnight():
-    at = datetime(2026, 6, 20, 15, 45, tzinfo=_UTC)
-    result = get_satellite_imagery(at)
-    s3 = next(
-        l for l in result.layers
-        if l.layer == "copernicus:daily_sentinel3ab_olci_l1_rgb_fulres"
-    )
-    assert s3.time == "2026-06-20T00:00:00Z"
-
-
 def test_pre_archive_time_yields_none():
     # MTG archive starts 2024-09-23; requesting before that → time=None.
     at = datetime(2024, 1, 1, 12, 0, tzinfo=_UTC)
@@ -134,23 +124,6 @@ def test_recent_request_clamped_to_publish_latency():
         assert _parse(layer.time) <= bound
 
 
-def test_daily_layer_uses_its_own_larger_latency():
-    # The Sentinel-3 daily mosaic overrides the global latency (~48 h), so a "now"
-    # request lands two full UTC days back, not today's partial accumulation.
-    now = datetime.now(timezone.utc)
-    result = get_satellite_imagery(now)
-    s3 = next(
-        l for l in result.layers
-        if l.layer == "copernicus:daily_sentinel3ab_olci_l1_rgb_fulres"
-    )
-    latency = next(
-        d["latency_minutes"] for d in config.EUMETVIEW_LAYERS
-        if d["name"] == "copernicus:daily_sentinel3ab_olci_l1_rgb_fulres"
-    )
-    expected_day = (now - timedelta(minutes=latency)).date()
-    assert s3.time == f"{expected_day.isoformat()}T00:00:00Z"
-
-
 def test_future_request_clamped_to_publish_latency():
     # A future timestamp must not produce a future (unavailable) frame either.
     future = datetime.now(timezone.utc) + timedelta(hours=6)
@@ -160,3 +133,54 @@ def test_future_request_clamped_to_publish_latency():
     )
     geo = next(l for l in result.layers if l.layer == "mtg_fd:rgb_geocolour")
     assert _parse(geo.time) <= bound
+
+
+# --- frames / animation ------------------------------------------------------
+
+def test_default_frames_single_element_equal_to_time():
+    at = datetime(2026, 6, 20, 14, 7, tzinfo=_UTC)
+    result = get_satellite_imagery(at)
+    for layer in result.layers:
+        assert layer.times == [layer.time]
+
+
+def test_frames_stepped_by_cadence_newest_first():
+    at = datetime(2026, 6, 20, 14, 7, tzinfo=_UTC)
+    result = get_satellite_imagery(at, frames=4)
+    clm = next(l for l in result.layers if l.layer == "msg_fes:clm")  # 15-min
+    assert clm.times == [
+        "2026-06-20T14:00:00Z",
+        "2026-06-20T13:45:00Z",
+        "2026-06-20T13:30:00Z",
+        "2026-06-20T13:15:00Z",
+    ]
+    assert clm.time == clm.times[0]
+
+
+def test_frames_all_within_latency_bound():
+    now = datetime.now(timezone.utc)
+    result = get_satellite_imagery(now, frames=5)
+    bound = now - timedelta(minutes=config.EUMETVIEW_LATENCY_MINUTES)
+    for layer in result.layers:
+        parsed = [_parse(t) for t in layer.times if t is not None]
+        assert all(t <= bound for t in parsed)
+        # Strictly decreasing (newest first, one cadence apart).
+        assert parsed == sorted(parsed, reverse=True)
+
+
+def test_frames_truncated_at_archive_start():
+    # mtg_fd:li_afa archives 2025-05-30, cadence 5 min. Two frames past midnight
+    # of the archive start step back before it and must be dropped (no nulls).
+    at = datetime(2025, 5, 30, 0, 7, tzinfo=_UTC)
+    result = get_satellite_imagery(at, frames=5)
+    li = next(l for l in result.layers if l.layer == "mtg_fd:li_afa")
+    assert li.times == ["2025-05-30T00:05:00Z", "2025-05-30T00:00:00Z"]
+    assert None not in li.times
+
+
+def test_pre_archive_frames_single_null():
+    at = datetime(2024, 1, 1, 12, 0, tzinfo=_UTC)
+    result = get_satellite_imagery(at, frames=5)
+    mtg = next(l for l in result.layers if l.layer == "mtg_fd:ir105_hrfi")
+    assert mtg.times == [None]
+    assert mtg.time is None

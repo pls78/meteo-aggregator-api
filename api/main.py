@@ -93,9 +93,17 @@ def imagery(
         description="UTC timestamp for the imagery (ISO 8601). Defaults to now. "
         "Each layer's time is snapped to its cadence boundary.",
     ),
+    frames: int = Query(
+        1,
+        ge=1,
+        le=config.MAX_IMAGERY_FRAMES,
+        description="Number of recent cadence-stepped frames per layer, newest "
+        "first, for a time-lapse animation. Defaults to 1 (single frame).",
+    ),
 ) -> SatelliteImagery:
-    # FastAPI rejects non-parseable datetime strings with HTTP 422.
+    # FastAPI rejects non-parseable datetime strings and out-of-range frame
+    # counts with HTTP 422.
     # Normalise to UTC so snapping is consistent regardless of input offset.
     if time is not None and time.tzinfo is None:
         time = time.replace(tzinfo=timezone.utc)
-    return get_satellite_imagery(time)
+    return get_satellite_imagery(time, frames=frames)

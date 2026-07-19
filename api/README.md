@@ -276,11 +276,13 @@ tiles directly from EUMETSAT.
 
 #### Query parameters
 
-| Param  | Type     | Required | Default | Description                                                          |
-|--------|----------|----------|---------|----------------------------------------------------------------------|
-| `time` | datetime | no       | now     | ISO 8601 UTC timestamp. Each layer's time is snapped to its cadence. |
+| Param    | Type     | Required | Default | Description                                                                    |
+|----------|----------|----------|---------|--------------------------------------------------------------------------------|
+| `time`   | datetime | no       | now     | ISO 8601 UTC timestamp. Each layer's time is snapped to its cadence.           |
+| `frames` | integer  | no       | 1       | Number of recent cadence-stepped frames per layer (newest first), 1–24, for a time-lapse animation. |
 
-Non-parseable `time` values are rejected with **HTTP 422**.
+Non-parseable `time` values and out-of-range `frames` (not 1–24) are rejected
+with **HTTP 422**.
 
 #### Example request
 
@@ -304,12 +306,16 @@ curl "http://localhost:8000/imagery?time=2026-06-20T12:00:00Z"
 | `wms_url` | string          | WMS endpoint (`https://view.eumetsat.int/geoserver/wms`)                              |
 | `layer`   | string          | WMS layer name (e.g. `mtg_fd:ir105_hrfi`)                                             |
 | `title`   | string          | Human-readable label                                                                  |
-| `time`    | string \| null  | ISO 8601 UTC, snapped to the layer's cadence. `null` if the request predates the archive. |
+| `time`    | string \| null  | ISO 8601 UTC, snapped to the layer's cadence. `null` if the request predates the archive. Equals `times[0]`. |
+| `times`   | array\<string \| null\> | Snapped frames, newest first (length ≤ `frames`). One element when `frames=1`; `[null]` if the request predates the archive. |
 | `crs`     | string          | `EPSG:3857` (Web Mercator — compatible with Leaflet, MapLibre, Apple MapKit)          |
 | `format`  | string          | `image/png` (transparent overlay; required for map compositing)                       |
 
 When `time` is `null` the WMS will serve the most recent available image for
-that layer.
+that layer. To animate a layer, request `frames=N` and cycle its `times` (oldest
+to newest) as the WMS `TIME` parameter, reusing the same tile URLs. A layer near
+its archive start may return fewer than `N` frames; no `null` is mixed into a
+non-empty run.
 
 #### Configured layers
 
@@ -324,7 +330,6 @@ that layer.
 | `mtg_fd:li_afa`                                   | Lightning Imager flash area                | 5 min   | 2025-05-30   |
 | `msg_fes:clm`                                     | Cloud Mask (classified)                    | 15 min  | 2020-09-01   |
 | `msg_rss:ir039_nrt`                               | IR 3.9 µm Rapid Scan (fog/low cloud, 5-min, Europe) | 5 min   | 2020-02-12   |
-| `copernicus:daily_sentinel3ab_olci_l1_rgb_fulres` | True-colour RGB daily — Sentinel-3 (high-res) | daily   | 2020-02-17   |
 
 The catalog favours visually rich RGB composites and avoids near-duplicate
 products. `msg_fes:ir039` (15-min full-disk IR 3.9) is dropped in favour of the

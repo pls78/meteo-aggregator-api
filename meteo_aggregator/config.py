@@ -32,6 +32,10 @@ EUMETVIEW_FORMAT: str = "image/png"
 # ~10-16 min, so 20 gives a safe margin while keeping imagery near-real-time.
 EUMETVIEW_LATENCY_MINUTES: int = 20
 
+# Max number of cadence-stepped frames the /imagery endpoint will return per
+# layer (for time-lapse animation). Bounds response size and archive walking.
+MAX_IMAGERY_FRAMES: int = 24
+
 # Layer catalog. Each entry:
 #   name            — WMS layer name (workspace:layer)
 #   title           — human-readable label
@@ -94,17 +98,6 @@ EUMETVIEW_LAYERS: list[dict] = [
         "title": "IR 3.9 µm Rapid Scan (fog/low cloud, 5-min) – MSG",
         "cadence_minutes": 5,
         "archive_from": "2020-02-12",
-    },
-    {
-        "name": "copernicus:daily_sentinel3ab_olci_l1_rgb_fulres",
-        "title": "True-colour RGB Daily – Sentinel-3",
-        "cadence_minutes": 0,
-        # Polar-orbiter daily mosaic: "today" is accumulated over the UTC day and
-        # is not complete/processed until ~2 days later (yesterday's tiles 502 or
-        # cover only part of the globe). Override the near-real-time latency so we
-        # request the day that ended ~48 h ago, which is complete worldwide.
-        "latency_minutes": 2880,
-        "archive_from": "2020-02-17",
     },
 ]
 

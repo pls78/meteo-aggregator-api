@@ -161,3 +161,26 @@ def test_imagery_pre_archive_time_yields_null_for_mtg():
     body = resp.json()
     mtg = next(l for l in body["layers"] if l["layer"] == "mtg_fd:ir105_hrfi")
     assert mtg["time"] is None
+
+
+def test_imagery_default_single_frame():
+    resp = client.get("/imagery")
+    assert resp.status_code == 200
+    for layer in resp.json()["layers"]:
+        assert layer["times"] == [layer["time"]]
+
+
+def test_imagery_frames_returns_arrays():
+    resp = client.get(
+        "/imagery", params={"time": "2026-06-20T14:07:00Z", "frames": 5}
+    )
+    assert resp.status_code == 200
+    clm = next(l for l in resp.json()["layers"] if l["layer"] == "msg_fes:clm")
+    assert len(clm["times"]) == 5
+    assert clm["time"] == clm["times"][0]
+
+
+@pytest.mark.parametrize("frames", [0, -1, config.MAX_IMAGERY_FRAMES + 1])
+def test_imagery_rejects_out_of_range_frames(frames):
+    resp = client.get("/imagery", params={"frames": frames})
+    assert resp.status_code == 422

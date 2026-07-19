@@ -60,12 +60,17 @@ class WmsLayerParams(BaseModel):
     ``time`` is pre-snapped to the layer's cadence boundary; ``None`` means the
     requested time predates the layer's archive (the WMS will serve the latest
     available image).
+
+    ``times`` holds one or more snapped frames, newest first, for building a
+    time-lapse animation; ``time`` equals ``times[0]``. A pre-archive request
+    yields ``times == [None]`` and ``time is None``.
     """
 
     wms_url: str
     layer: str
     title: str
     time: Optional[str] = None  # ISO 8601 UTC, e.g. "2026-06-20T14:00:00Z"
+    times: list[Optional[str]]  # snapped frames, newest first; times[0] == time
     crs: str
     format: str
 
