@@ -187,6 +187,10 @@ it defaults to the local dev origins. A `GET /health` endpoint (returns
 [`api/README.md`](api/README.md#deployment) for the full deployment and CORS
 reference.
 
+[`docs/infrastructure.md`](docs/infrastructure.md) describes the whole running
+setup — Cloud Run, keyless GitHub deploys, the Cloudflare Pages proxy in front of
+the UI, what it costs and what is deliberately not hardened.
+
 ## Tests
 
 ```bash

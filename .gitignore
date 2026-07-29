@@ -21,5 +21,10 @@ htmlcov/
 # Local Claude Code settings (machine-specific)
 .claude/settings.local.json
 
+# Local-only notes holding real deployment identifiers (see docs/infrastructure.md
+# for the same topology with placeholders). Never commit these.
+*.local.md
+*.local
+
 # macOS
 .DS_Store
