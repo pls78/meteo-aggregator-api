@@ -22,20 +22,42 @@ The service is stateless, keyless, and holds no persistent state, so it runs as 
 single scale-to-zero container. A minimal [`Dockerfile`](../Dockerfile) builds it;
 uvicorn binds `0.0.0.0:$PORT` (the platform injects `$PORT`, default `8080`).
 
-Deployed target — Google Cloud Run (`europe-west1`):
-<https://your-backend.example.com>
+**No public instance is provided — deploy your own.** Google Cloud Run is the
+tested target:
 
 ```bash
 # from the repo root — builds the Dockerfile, deploys, prints the HTTPS URL
-gcloud run deploy meteo-aggregator --source . --region europe-west1 --allow-unauthenticated
+gcloud run deploy <your-service> --source . --region <your-region> --allow-unauthenticated
 
-# point CORS at the deployed UI origin (see below)
-gcloud run services update meteo-aggregator --region europe-west1 \
-  --set-env-vars ALLOWED_ORIGINS=https://meteo-aggregator.pages.dev
+# point CORS at your deployed UI origin (see below)
+gcloud run services update <your-service> --region <your-region> \
+  --set-env-vars ALLOWED_ORIGINS=https://<your-ui-origin>
 ```
+
+Give the printed URL to the web UI as `VITE_API_BASE_URL`.
 
 Cloud Run scales to zero, so the service costs nothing while idle; the first
 request after inactivity pays a ~1–2 s cold start.
+
+### Automated deploys (GitHub Actions)
+
+[`.github/workflows/ci-cd.yml`](../.github/workflows/ci-cd.yml) runs the tests on
+every push and deploys `main` via keyless Workload Identity Federation. It reads
+every deploy target from repository secrets, so the workflow file names no
+project, service or region:
+
+```bash
+gh secret set GCP_PROJECT_ID      --body '<your-gcp-project-id>'
+gh secret set GCP_WIF_PROVIDER    --body 'projects/<number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>'
+gh secret set GCP_SERVICE_ACCOUNT --body '<deployer>@<project>.iam.gserviceaccount.com'
+gh secret set CLOUD_RUN_SERVICE   --body '<your-service>'
+gh secret set CLOUD_RUN_REGION    --body '<your-region>'
+gh secret set ALLOWED_ORIGINS     --body 'https://<your-ui-origin>'
+```
+
+The WIF provider needs an attribute condition pinning it to your fork
+(`assertion.repository=='<owner>/<repo>'`) and the service account needs a
+matching `principalSet` binding, or the deploy job cannot mint credentials.
 
 ## Browser clients (CORS)
 
@@ -50,7 +72,7 @@ dev-server origins:
 In production, set `ALLOWED_ORIGINS` to the deployed UI origin(s):
 
 ```bash
-ALLOWED_ORIGINS=https://meteo-aggregator.pages.dev uvicorn api.main:app
+ALLOWED_ORIGINS=https://<your-ui-origin> uvicorn api.main:app
 ```
 
 A page served from an allowed origin can `fetch` the endpoints directly; other

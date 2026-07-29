@@ -28,17 +28,24 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      # Deploy targets live in repository secrets so this public repo does not
+      # advertise the project, service or region — a Cloud Run URL is derivable
+      # from those three. Set them with `gh secret set` (see api/README.md).
       - id: auth
         uses: google-github-actions/auth@v2
         with:
-          project_id: <gcp-project>
-          workload_identity_provider: projects/<project-number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>
-          service_account: <deployer>@<gcp-project>.iam.gserviceaccount.com
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
       - uses: google-github-actions/setup-gcloud@v2
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy meteo-aggregator \
+          gcloud run deploy "$SERVICE" \
             --source . \
-            --region europe-west1 \
+            --region "$REGION" \
             --allow-unauthenticated \
-            --set-env-vars ALLOWED_ORIGINS=https://meteo-aggregator.pages.dev
+            --set-env-vars ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
+        env:
+          SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
+          REGION: ${{ secrets.CLOUD_RUN_REGION }}
+          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}

@@ -169,13 +169,17 @@ confidence thresholds are also in `config.py`.
 ## Deploy
 
 The API is stateless and keyless, so it deploys as a single scale-to-zero
-container ([`Dockerfile`](Dockerfile)). It currently runs on Google Cloud Run:
+container ([`Dockerfile`](Dockerfile)).
 
-<https://your-backend.example.com>
+**There is no public instance — run your own.** Google Cloud Run is what this
+repo is set up for, but any container host works:
 
 ```bash
-gcloud run deploy meteo-aggregator --source . --region europe-west1 --allow-unauthenticated
+gcloud run deploy <your-service> --source . --region <your-region> --allow-unauthenticated
 ```
+
+The deploy prints your instance's HTTPS URL. That URL is what the web UI's
+`VITE_API_BASE_URL` must point at.
 
 For browser clients, set `ALLOWED_ORIGINS` (comma-separated) to the UI's origin;
 it defaults to the local dev origins. A `GET /health` endpoint (returns
