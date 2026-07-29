@@ -39,6 +39,13 @@ Give the printed URL to the web UI as `VITE_API_BASE_URL`.
 Cloud Run scales to zero, so the service costs nothing while idle; the first
 request after inactivity pays a ~1–2 s cold start.
 
+**Cap your spend.** The service is public and unauthenticated, so cost is bounded
+only by how many instances it will start. The CI deploy pins `--max-instances 1`
+and `--timeout 20s`; one instance at the default concurrency of 80 handles
+personal-scale traffic, and a short timeout stops a slow upstream from pinning
+the instance. A billing budget alerts but does not stop spend — only the instance
+cap does.
+
 ### Automated deploys (GitHub Actions)
 
 [`.github/workflows/ci-cd.yml`](../.github/workflows/ci-cd.yml) runs the tests on

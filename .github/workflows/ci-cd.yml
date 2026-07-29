@@ -40,10 +40,16 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
       - name: Deploy to Cloud Run
         run: |
+          # --max-instances and --timeout are cost caps, declared here so they
+          # survive a service recreated from scratch. This is a personal-scale
+          # deployment: one instance at concurrency 80 is ample, and no request
+          # should hold an instance for long. Raise deliberately, not by accident.
           gcloud run deploy "$SERVICE" \
             --source . \
             --region "$REGION" \
             --allow-unauthenticated \
+            --max-instances 1 \
+            --timeout 20s \
             --set-env-vars ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
         env:
           SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
