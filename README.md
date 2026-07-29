@@ -189,3 +189,13 @@ reference.
 pytest                 # offline; mocks Open-Meteo with respx
 METEO_LIVE=1 pytest    # also runs the live integration test (hits the network)
 ```
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).
+
+That covers this code only. The forecasts themselves come from
+[Open-Meteo](https://open-meteo.com) (keyless and free for non-commercial use,
+data under CC-BY-4.0; commercial use needs their API key) and the satellite
+imagery from [EUMETSAT](https://view.eumetsat.int) under EUMETSAT's own terms.
+Attribute both if you redistribute the data.

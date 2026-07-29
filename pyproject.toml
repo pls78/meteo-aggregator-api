@@ -7,6 +7,8 @@ name = "meteo-aggregator"
 version = "0.1.0"
 description = "Accurate local 7-day forecasts by aggregating multiple weather models via Open-Meteo."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.27",
