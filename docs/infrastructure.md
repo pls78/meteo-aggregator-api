@@ -33,6 +33,7 @@ can run public and scale to zero.
 ```bash
 gcloud run deploy <your-service> --source . --region <your-region> \
   --allow-unauthenticated --max-instances 1 --timeout 20s \
+  --service-account <runtime-sa>@<project>.iam.gserviceaccount.com \
   --set-env-vars ALLOWED_ORIGINS=https://<your-ui-origin>
 ```
 
@@ -40,9 +41,30 @@ gcloud run deploy <your-service> --source . --region <your-region> \
 (`cloud-run-source-deploy`, created on first deploy). Defaults otherwise: 1 vCPU, 512 MiB,
 concurrency 80, startup CPU boost.
 
-**`--max-instances` and `--timeout` are cost controls, and they are pinned in
+**`--max-instances`, `--timeout` and `--service-account` are pinned in
 [`ci-cd.yml`](../.github/workflows/ci-cd.yml)** rather than set by hand, so a service recreated
-from scratch cannot silently come back with the defaults (100 instances, 300 s).
+from scratch cannot silently come back with the defaults (100 instances, 300 s, and the compute
+service account).
+
+### Runtime identity
+
+Cloud Run defaults to the project's **default compute service account, which typically holds
+project-wide `roles/editor`**. This app needs no Google Cloud access at all — it only makes
+outbound HTTPS calls to Open-Meteo. So it runs as a dedicated account holding exactly one role,
+`roles/logging.logWriter`, kept so container logs keep flowing:
+
+```bash
+gcloud iam service-accounts create <runtime-sa> --project=<project>
+gcloud projects add-iam-policy-binding <project> \
+  --member="serviceAccount:<runtime-sa>@<project>.iam.gserviceaccount.com" \
+  --role=roles/logging.logWriter
+# the deployer must be allowed to act as it
+gcloud iam service-accounts add-iam-policy-binding <runtime-sa>@<project>.iam.gserviceaccount.com \
+  --member="serviceAccount:<deployer>@<project>.iam.gserviceaccount.com" \
+  --role=roles/iam.serviceAccountUser
+```
+
+A compromised dependency then inherits nothing worth having.
 
 ## Automated deploys — GitHub Actions + Workload Identity Federation
 
@@ -125,9 +147,6 @@ reducing casual discovery, not secrecy.
 
 Deliberate gaps, listed so they are choices rather than oversights:
 
-- **Runtime service account.** Cloud Run defaults to the compute SA, which typically holds
-  project-wide `roles/editor`. This app needs no GCP permissions at all — deploy with
-  `--service-account=<sa>` pointing at a dedicated SA with no role bindings.
 - **The backend is reachable directly** by anyone who learns its URL. Closing that means
   `--no-allow-unauthenticated` plus an ID token minted in the Worker.
 - **No effective rate limiting.** Per-isolate counters in a Pages Function do not accumulate

@@ -40,18 +40,22 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
       - name: Deploy to Cloud Run
         run: |
-          # --max-instances and --timeout are cost caps, declared here so they
-          # survive a service recreated from scratch. This is a personal-scale
-          # deployment: one instance at concurrency 80 is ample, and no request
-          # should hold an instance for long. Raise deliberately, not by accident.
+          # --max-instances and --timeout are cost caps, and --service-account
+          # pins the runtime identity to a dedicated account with no project
+          # permissions (the app only makes outbound HTTPS calls; the Cloud Run
+          # default would be the compute SA, typically project-wide editor).
+          # All three are declared here so a service recreated from scratch
+          # cannot silently come back with the defaults.
           gcloud run deploy "$SERVICE" \
             --source . \
             --region "$REGION" \
             --allow-unauthenticated \
+            --service-account "$RUNTIME_SA" \
             --max-instances 1 \
             --timeout 20s \
             --set-env-vars ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
         env:
           SERVICE: ${{ secrets.CLOUD_RUN_SERVICE }}
           REGION: ${{ secrets.CLOUD_RUN_REGION }}
+          RUNTIME_SA: ${{ secrets.CLOUD_RUN_RUNTIME_SA }}
           ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
