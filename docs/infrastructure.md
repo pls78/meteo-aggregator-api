@@ -88,8 +88,19 @@ gcloud iam service-accounts add-iam-policy-binding <deployer>@<project>.iam.gser
 
 **Renaming the GitHub repo breaks deploys** until both are updated.
 
-Deployer roles: `run.admin`, `cloudbuild.builds.editor`, `artifactregistry.writer`,
-`storage.admin`, `iam.serviceAccountUser`.
+Deployer roles, kept as tight as `--source` deploys allow:
+
+| Scope | Role | Why |
+|---|---|---|
+| project | `run.admin` | create revisions |
+| project | `cloudbuild.builds.editor` | run the build |
+| project | `artifactregistry.writer` | push the image |
+| project | `iam.serviceAccountUser` | act as the runtime SA |
+| project | `storage.bucketViewer` | `gcloud run deploy --source` calls `storage.buckets.list`, which is project-scoped — bucket-level roles cannot grant it |
+| the `run-sources-…` bucket | `storage.objectAdmin` + `storage.legacyBucketReader` | upload the source tarball |
+
+`storage.admin` project-wide is the default many setups end up with; it is far broader than
+needed. Object write access belongs on the build bucket alone.
 
 Deploy targets come from repository secrets — see
 [`api/README.md`](../api/README.md#automated-deploys-github-actions) for the full list and the
