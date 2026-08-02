@@ -3,7 +3,7 @@
 [![CI/CD](https://github.com/pls78/meteo-aggregator-api/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/pls78/meteo-aggregator-api/actions/workflows/ci-cd.yml)
 
 Accurate local 7-day forecasts by aggregating multiple weather models. No single
-source is best across all lead times — high-resolution regional models win the
+source is best across all lead times: high-resolution regional models win the
 near term (days 1–3), ECMWF wins at range, and far-out days are inherently
 probabilistic. This service blends them into one consensus forecast and reports
 how much to trust each day.
@@ -13,15 +13,15 @@ It is a **library core** (`meteo_aggregator/`) plus a **thin FastAPI layer**
 
 ## How it works
 
-- **General provider** — global models fetched together from the
+- **General provider**: global models fetched together from the
   [Open-Meteo Forecast API](https://open-meteo.com/en/docs) in one keyless call,
   up to a 16-day horizon: ECMWF **IFS**, ECMWF **AIFS** (the machine-learning
   model), GFS, and ICON. Blending a data-driven model with the physics-based ones
   diversifies the consensus.
-- **Specialized-local provider** — a high-resolution regional model
+- **Specialized-local provider**: a high-resolution regional model
   (default: ItaliaMeteo-ARPAE **ICON-2i**, ~2 km, Italy-wide, ~3-day horizon)
   via Open-Meteo.
-- **Aggregation** — a lead-time-weighted consensus (local high-res favored
+- **Aggregation**: a lead-time-weighted consensus (local high-res favored
   days 1–3, ECMWF at range) with a per-day **confidence** (level + numeric
   range) derived from inter-model disagreement and Open-Meteo
   [ensemble](https://open-meteo.com/en/docs/ensemble-api) spread. The full
@@ -65,7 +65,7 @@ curl "http://localhost:8000/hourly?lat=45.5&lon=9.5&hours=48"
 
 Each hour carries `values` (temperature, precipitation, wind, cloud cover, UV),
 `confidence`, and a `breakdown` per model. Hour timestamps (`date`) are in the
-location's local timezone — matching the daily forecast — so an hour groups under
+location's local timezone, matching the daily forecast, so an hour groups under
 the same calendar day as `/forecast`; `hours[0]` is current conditions.
 `wind_direction_10m` and
 `weather_code` are non-blendable and taken from the highest-weighted model.
@@ -86,11 +86,11 @@ for h in forecast.hours:
 ## Live satellite imagery
 
 `GET /imagery` returns WMS parameters for a curated set of EUMETSAT EUMETView
-layers — spectacular MTG RGB composites (Geo Colour, Dust, Cloud Phase), MSG RGB
-composites (Airmass, Convection), plus MTG IR cloud imagery, lightning, cloud
-mask, and rapid-scan fog — ready to pass
-directly to a map library. Pass `frames=N` to get the last N cadence-stepped
-frames per layer (newest first) for a time-lapse animation:
+layers: MTG RGB composites (Geo Colour, Dust, Cloud Phase), MSG RGB composites
+(Airmass, Convection), plus MTG IR cloud imagery, lightning, cloud mask, and
+rapid-scan fog, ready to pass directly to a map library. Pass `frames=N` to get
+the last N cadence-stepped frames per layer (newest first) for a time-lapse
+animation:
 
 ```bash
 curl "http://localhost:8000/imagery?time=2026-06-20T12:00:00Z"
@@ -109,7 +109,7 @@ L.tileLayer.wms(layer.wms_url, {
 }).addTo(map);
 ```
 
-No image bytes flow through this service — the map client fetches tiles directly
+No image bytes flow through this service; the map client fetches tiles directly
 from EUMETSAT (keyless, non-commercial). See [`api/README.md`](api/README.md)
 for the full layer list and field reference.
 
@@ -134,7 +134,7 @@ curl "http://localhost:8000/forecast?lat=45.46&lon=9.19&days=7"
 ```
 
 `/search` is backed by the keyless Open-Meteo Geocoding API and returns a ranked
-list of matching places (no match → `[]`). Results are language-sensitive — pass
+list of matching places (no match → `[]`). Results are language-sensitive, so pass
 `&language=it` to favour Italian names (`Milano`). See
 [`api/README.md`](api/README.md) for the full `Place` field list.
 
@@ -171,7 +171,7 @@ confidence thresholds are also in `config.py`.
 The API is stateless and keyless, so it deploys as a single scale-to-zero
 container ([`Dockerfile`](Dockerfile)).
 
-**There is no public instance — run your own.** Google Cloud Run is what this
+**There is no public instance; run your own.** Google Cloud Run is what this
 repo is set up for, but any container host works:
 
 ```bash
@@ -188,7 +188,7 @@ it defaults to the local dev origins. A `GET /health` endpoint (returns
 reference.
 
 [`docs/infrastructure.md`](docs/infrastructure.md) describes the whole running
-setup — Cloud Run, keyless GitHub deploys, the Cloudflare Pages proxy in front of
+setup: Cloud Run, keyless GitHub deploys, the Cloudflare Pages proxy in front of
 the UI, what it costs and what is deliberately not hardened.
 
 ## Tests
@@ -200,7 +200,7 @@ METEO_LIVE=1 pytest    # also runs the live integration test (hits the network)
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+MIT, see [`LICENSE`](LICENSE).
 
 That covers this code only. The forecasts themselves come from
 [Open-Meteo](https://open-meteo.com) (keyless and free for non-commercial use,

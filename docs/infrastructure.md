@@ -1,7 +1,7 @@
 # Infrastructure
 
 How this project is deployed and what runs where. Written so you can reproduce the setup for
-your own instance — every identifier here is a placeholder, because this repo deliberately names
+your own instance; every identifier here is a placeholder, because this repo deliberately names
 no running deployment (see [Why no URLs](#why-no-urls-in-this-repo)).
 
 ## Topology
@@ -24,10 +24,10 @@ The UI never calls the backend cross-origin: in development Vite's `server.proxy
 `/api`, in production the Pages Function does. **CORS is therefore never exercised**, and no
 backend URL is baked into the JavaScript bundle.
 
-## The API — Google Cloud Run
+## The API: Google Cloud Run
 
 A single stateless, keyless container built from the repo [`Dockerfile`](../Dockerfile). No
-database, no persistent state, no secrets — it holds nothing worth protecting, which is why it
+database, no persistent state, no secrets. It holds nothing worth protecting, which is why it
 can run public and scale to zero.
 
 ```bash
@@ -49,7 +49,7 @@ service account).
 ### Runtime identity
 
 Cloud Run defaults to the project's **default compute service account, which typically holds
-project-wide `roles/editor`**. This app needs no Google Cloud access at all — it only makes
+project-wide `roles/editor`**. This app needs no Google Cloud access at all; it only makes
 outbound HTTPS calls to Open-Meteo. So it runs as a dedicated account holding exactly one role,
 `roles/logging.logWriter`, kept so container logs keep flowing:
 
@@ -66,7 +66,7 @@ gcloud iam service-accounts add-iam-policy-binding <runtime-sa>@<project>.iam.gs
 
 A compromised dependency then inherits nothing worth having.
 
-## Automated deploys — GitHub Actions + Workload Identity Federation
+## Automated deploys: GitHub Actions + Workload Identity Federation
 
 Push to `main` → tests → deploy. Authentication is **keyless**: no service-account JSON key
 exists anywhere. GitHub mints an OIDC token, and a Workload Identity Pool exchanges it for
@@ -96,17 +96,17 @@ Deployer roles, kept as tight as `--source` deploys allow:
 | project | `cloudbuild.builds.editor` | run the build |
 | project | `artifactregistry.writer` | push the image |
 | project | `iam.serviceAccountUser` | act as the runtime SA |
-| project | `storage.bucketViewer` | `gcloud run deploy --source` calls `storage.buckets.list`, which is project-scoped — bucket-level roles cannot grant it |
+| project | `storage.bucketViewer` | `gcloud run deploy --source` calls `storage.buckets.list`, which is project-scoped, and bucket-level roles cannot grant it |
 | the `run-sources-…` bucket | `storage.objectAdmin` + `storage.legacyBucketReader` | upload the source tarball |
 
 `storage.admin` project-wide is the default many setups end up with; it is far broader than
 needed. Object write access belongs on the build bucket alone.
 
-Deploy targets come from repository secrets — see
+Deploy targets come from repository secrets, see
 [`api/README.md`](../api/README.md#automated-deploys-github-actions) for the full list and the
 `gh secret set` commands.
 
-## The UI — Cloudflare Pages
+## The UI: Cloudflare Pages
 
 Static direct upload, no Git integration:
 
@@ -126,7 +126,7 @@ npx wrangler pages secret put API_ORIGIN --project-name=<your-project> --env pre
 ```
 
 Without it, `/api/*` returns 503. The Function rejects non-GET, forwards `/api/foo` to
-`${API_ORIGIN}/foo`, and caches successful responses for 5 minutes at the edge — so repeat
+`${API_ORIGIN}/foo`, and caches successful responses for 5 minutes at the edge, so repeat
 queries never reach Cloud Run.
 
 Two behaviours worth knowing if you modify it: Cloudflare does **not** cache Function responses
@@ -141,7 +141,7 @@ static hosting and Functions, and Open-Meteo/EUMETSAT/CARTO are free at this vol
 
 The exposure is an unauthenticated public endpoint. Bounding it:
 
-- **`--max-instances`** is the real ceiling — it caps how much compute can ever run at once.
+- **`--max-instances`** is the real ceiling: it caps how much compute can ever run at once.
 - **The edge cache** absorbs repeat traffic before it reaches Cloud Run.
 - **A billing budget alerts but cannot stop spend.** GCP has no hard cap. A true kill switch
   needs budget → Pub/Sub → a function that detaches the billing account.
@@ -150,7 +150,7 @@ The exposure is an unauthenticated public endpoint. Bounding it:
 
 The Cloud Run URL is derivable from project number + service + region, so naming any of them
 here would expose the deployment. They live in repository secrets instead, and the docs use
-placeholders. This keeps the instance out of code search and scrapers — but note it does **not**
+placeholders. This keeps the instance out of code search and scrapers, but note it does **not**
 hide it from anyone using the deployed site, since the proxy's own origin is public. The point is
 reducing casual discovery, not secrecy.
 
@@ -163,4 +163,4 @@ Deliberate gaps, listed so they are choices rather than oversights:
 - **No effective rate limiting.** Per-isolate counters in a Pages Function do not accumulate
   across Cloudflare's isolates. Real options are Durable Objects or a custom domain with a WAF
   rate-limiting rule.
-- **Single region, single instance** — no redundancy.
+- **Single region, single instance**, so no redundancy.

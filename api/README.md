@@ -22,11 +22,11 @@ The service is stateless, keyless, and holds no persistent state, so it runs as 
 single scale-to-zero container. A minimal [`Dockerfile`](../Dockerfile) builds it;
 uvicorn binds `0.0.0.0:$PORT` (the platform injects `$PORT`, default `8080`).
 
-**No public instance is provided — deploy your own.** Google Cloud Run is the
+**No public instance is provided; deploy your own.** Google Cloud Run is the
 tested target:
 
 ```bash
-# from the repo root — builds the Dockerfile, deploys, prints the HTTPS URL
+# from the repo root: builds the Dockerfile, deploys, prints the HTTPS URL
 gcloud run deploy <your-service> --source . --region <your-region> --allow-unauthenticated
 
 # point CORS at your deployed UI origin (see below)
@@ -43,7 +43,7 @@ request after inactivity pays a ~1–2 s cold start.
 only by how many instances it will start. The CI deploy pins `--max-instances 1`
 and `--timeout 20s`; one instance at the default concurrency of 80 handles
 personal-scale traffic, and a short timeout stops a slow upstream from pinning
-the instance. A billing budget alerts but does not stop spend — only the instance
+the instance. A billing budget alerts but does not stop spend; only the instance
 cap does.
 
 ### Automated deploys (GitHub Actions)
@@ -300,7 +300,7 @@ weights renormalize automatically and confidence widens at longer range.
 
 Returns WMS parameters for all configured EUMETSAT EUMETView satellite layers at
 a given timestamp. Each entry is ready to register with a map library (Leaflet,
-MapLibre); no image bytes flow through this service — the map client fetches
+MapLibre); no image bytes flow through this service, since the map client fetches
 tiles directly from EUMETSAT.
 
 #### Query parameters
@@ -337,7 +337,7 @@ curl "http://localhost:8000/imagery?time=2026-06-20T12:00:00Z"
 | `title`   | string          | Human-readable label                                                                  |
 | `time`    | string \| null  | ISO 8601 UTC, snapped to the layer's cadence. `null` if the request predates the archive. Equals `times[0]`. |
 | `times`   | array\<string \| null\> | Snapped frames, newest first (length ≤ `frames`). One element when `frames=1`; `[null]` if the request predates the archive. |
-| `crs`     | string          | `EPSG:3857` (Web Mercator — compatible with Leaflet, MapLibre, Apple MapKit)          |
+| `crs`     | string          | `EPSG:3857` (Web Mercator, compatible with Leaflet, MapLibre, Apple MapKit)          |
 | `format`  | string          | `image/png` (transparent overlay; required for map compositing)                       |
 
 When `time` is `null` the WMS will serve the most recent available image for
@@ -457,7 +457,7 @@ is the top match for `Milan`; pass `&language=it` to favour the local spelling
 ### `GET /health`
 
 Liveness/readiness probe. Returns `200 OK` with `{"status": "ok"}` and makes no
-upstream calls — safe for container health checks and uptime monitors.
+upstream calls, so it is safe for container health checks and uptime monitors.
 
 ```bash
 curl "http://localhost:8000/health"
@@ -478,6 +478,6 @@ confidence falls back to inter-model disagreement alone.
 - Open-Meteo requires **no API key** for non-commercial use; commercial use needs
   a key (see Open-Meteo's terms).
 - To change models, variables, weighting, or the swappable local provider, edit
-  `meteo_aggregator/config.py` — no API changes required. See the root
+  `meteo_aggregator/config.py`, with no API changes required. See the root
   [`README.md`](../README.md) for the relocation/swap instructions.
 ```
